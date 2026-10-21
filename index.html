@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IoT Vehicle Collision Detection Dashboard</title>
+  <meta name="description" content="IoT-Based Distributed Vehicle Collision Detection and Emergency Response System — Real-time monitoring dashboard." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ============================================================
+       HEADER
+       ============================================================ -->
+  <header class="top-header">
+    <div class="header-left">
+      <div class="header-logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">VehicleGuard IoT</span>
+      </div>
+      <span class="header-badge">🚗 VH-001</span>
+    </div>
+    <div class="header-right">
+      <span id="connection-status" class="connection-indicator online">
+        <span class="status-dot green"></span> CONNECTED
+      </span>
+      <span id="cloud-status" class="connection-indicator cloud-offline" title="Cloud backend connection">
+        <span class="status-dot grey"></span> CLOUD
+      </span>
+      <span id="header-clock">—</span>
+      <button id="theme-toggle" class="theme-toggle" title="Switch to light mode">☀️</button>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       DASHBOARD CONTENT
+       ============================================================ -->
+  <main class="dashboard">
+
+    <!-- ========== VEHICLE STATUS HERO (Full-width focal point) ========== -->
+    <div class="vehicle-hero card border-normal" id="vehicle-status-card">
+      <div class="card-header">
+        <span class="card-title"><span class="icon">🛡️</span> Vehicle Status</span>
+        <span class="badge badge-normal" id="hero-status-badge">NORMAL</span>
+      </div>
+
+      <div class="hero-body">
+        <!-- Left column: identity + status -->
+        <div class="hero-column">
+          <div class="hero-stat">
+            <span class="hero-stat-label">Vehicle ID</span>
+            <span class="hero-stat-value" id="vehicle-id-display">VH-001</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label">Current Status</span>
+            <span class="hero-stat-value normal" id="vehicle-status-value">
+              <span class="status-dot green"></span> NORMAL
+            </span>
+            <span id="vehicle-status-sub">All systems operational</span>
+          </div>
+        </div>
+
+        <!-- Center: Vehicle SVG visualization -->
+        <div class="hero-vehicle-center vehicle-normal" id="vehicle-viz">
+          <svg class="vehicle-svg" viewBox="0 0 260 100" xmlns="http://www.w3.org/2000/svg">
+            <!-- Status glow ring around the car -->
+            <ellipse cx="130" cy="55" rx="120" ry="42" class="vehicle-glow"/>
+
+            <!-- Ground shadow -->
+            <ellipse cx="130" cy="90" rx="82" ry="5" class="v-shadow"/>
+
+            <!-- Lower body -->
+            <rect x="32" y="48" width="196" height="26" rx="5" class="v-body"/>
+
+            <!-- Cabin -->
+            <path d="M82,48 L96,25 Q99,21 103,21 L167,21 Q171,21 174,25 L193,48" class="v-cabin"/>
+
+            <!-- B-pillar -->
+            <line x1="138" y1="22" x2="138" y2="48" class="v-detail-line"/>
+
+            <!-- Front windshield -->
+            <path d="M88,46 L100,27 L135,27 L135,46 Z" class="v-glass"/>
+            <!-- Rear window -->
+            <path d="M141,46 L141,27 L165,27 L186,46 Z" class="v-glass"/>
+
+            <!-- Headlight -->
+            <rect x="222" y="52" width="8" height="8" rx="2" class="v-headlight"/>
+            <!-- Taillight -->
+            <rect x="30" y="52" width="6" height="8" rx="2" class="v-taillight"/>
+
+            <!-- Handle -->
+            <rect x="150" y="40" width="12" height="2" rx="1" class="v-handle"/>
+
+            <!-- Front wheel -->
+            <circle cx="74" cy="74" r="15" class="v-wheel"/>
+            <circle cx="74" cy="74" r="10" class="v-rim"/>
+            <circle cx="74" cy="74" r="3.5" class="v-hub"/>
+            <g class="v-spokes" style="transform-origin:74px 74px">
+              <line x1="74" y1="64" x2="74" y2="67" class="v-spoke-line"/>
+              <line x1="84" y1="74" x2="81" y2="74" class="v-spoke-line"/>
+              <line x1="74" y1="84" x2="74" y2="81" class="v-spoke-line"/>
+              <line x1="64" y1="74" x2="67" y2="74" class="v-spoke-line"/>
+            </g>
+
+            <!-- Rear wheel -->
+            <circle cx="192" cy="74" r="15" class="v-wheel"/>
+            <circle cx="192" cy="74" r="10" class="v-rim"/>
+            <circle cx="192" cy="74" r="3.5" class="v-hub"/>
+            <g class="v-spokes" style="transform-origin:192px 74px">
+              <line x1="192" y1="64" x2="192" y2="67" class="v-spoke-line"/>
+              <line x1="202" y1="74" x2="199" y2="74" class="v-spoke-line"/>
+              <line x1="192" y1="84" x2="192" y2="81" class="v-spoke-line"/>
+              <line x1="182" y1="74" x2="185" y2="74" class="v-spoke-line"/>
+            </g>
+
+            <!-- Antenna -->
+            <line x1="130" y1="21" x2="130" y2="12" class="v-antenna"/>
+            <circle cx="130" cy="10" r="2" class="v-antenna-dot"/>
+
+            <!-- Telemetry signal waves -->
+            <circle cx="130" cy="10" r="4" class="v-signal s1"/>
+            <circle cx="130" cy="10" r="4" class="v-signal s2"/>
+            <circle cx="130" cy="10" r="4" class="v-signal s3"/>
+          </svg>
+        </div>
+
+        <!-- Right column: connection + health -->
+        <div class="hero-column">
+          <div class="hero-stat">
+            <span class="hero-stat-label">Connection</span>
+            <span class="hero-stat-value" id="hero-connection">
+              <span class="status-dot green"></span> ONLINE
+            </span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label">System Health</span>
+            <span class="hero-stat-value" id="vehicle-health">All systems operational</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-footer">
+        <span>Last Data Update: <span id="vehicle-last-update">—</span></span>
+        <span>Cloud Events: <span id="cloud-event-count">—</span> · Latest: <span id="cloud-latest-time">—</span></span>
+        <span>Node Count: 3 / 3</span>
+      </div>
+    </div>
+
+    <!-- ========== ROW: Collision + Emergency ========== -->
+    <div class="grid-2 section-gap">
+
+      <!-- Collision Detection Panel -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">💥</span> Collision Detection</span>
+        </div>
+        <div class="card-body">
+          <div class="detection-grid">
+            <div class="detection-item">
+              <div class="det-label">Impact</div>
+              <div id="impact-value" class="det-value safe">NOT DETECTED</div>
+            </div>
+            <div class="detection-item">
+              <div class="det-label">Rollover</div>
+              <div id="rollover-value" class="det-value safe">NOT DETECTED</div>
+            </div>
+            <div class="detection-item">
+              <div class="det-label">Confidence</div>
+              <div id="confidence-value" class="det-value safe">2%</div>
+            </div>
+            <div class="detection-item">
+              <div class="det-label">Severity</div>
+              <div id="severity-value" class="det-value safe">NONE</div>
+            </div>
+            <div class="detection-item">
+              <div class="det-label">Detection State</div>
+              <div id="collision-state" class="det-value safe">NORMAL</div>
+            </div>
+            <div class="detection-item">
+              <div class="det-label">Timestamp</div>
+              <div id="collision-timestamp" class="det-value neutral">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency Alert Panel -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">🚨</span> Emergency Alert</span>
+        </div>
+        <div id="alert-status-box" class="alert-status-box no-alert">
+          <div id="alert-icon" class="alert-icon">✅</div>
+          <div id="alert-text" class="alert-text">NO ACTIVE ALERT</div>
+          <div id="alert-sub" class="alert-sub">System monitoring</div>
+        </div>
+        <div class="alert-meta">
+          <div class="alert-meta-item">
+            <div class="meta-label">Alert Type</div>
+            <div class="meta-value" id="alert-type">—</div>
+          </div>
+          <div class="alert-meta-item">
+            <div class="meta-label">Alert Time</div>
+            <div class="meta-value" id="alert-time">—</div>
+          </div>
+          <div class="alert-meta-item">
+            <div class="meta-label">Sent To</div>
+            <div class="meta-value" id="alert-sent-to">—</div>
+          </div>
+          <div class="alert-meta-item">
+            <div class="meta-label">Status</div>
+            <div class="meta-value">Monitoring</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========== ROW: Live Motion Data ========== -->
+    <div class="section-gap">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">📐</span> Live Motion Data (MPU6050)</span>
+          <span style="font-size:0.68rem;color:var(--text-muted);font-family:var(--font-mono);">Updating every 1s</span>
+        </div>
+        <div class="card-body">
+          <!-- Sensor values -->
+          <div class="sensor-grid">
+            <div class="sensor-item">
+              <div class="sensor-label">Accel X</div>
+              <div class="sensor-value" id="accel-x">0.12</div>
+              <div class="sensor-unit">g</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Accel Y</div>
+              <div class="sensor-value" id="accel-y">-0.05</div>
+              <div class="sensor-unit">g</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Accel Z</div>
+              <div class="sensor-value" id="accel-z">9.78</div>
+              <div class="sensor-unit">g</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Magnitude</div>
+              <div class="sensor-value" id="accel-mag">9.79</div>
+              <div class="sensor-unit">g</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Gyro X</div>
+              <div class="sensor-value" id="gyro-x">0.8</div>
+              <div class="sensor-unit">°/s</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Gyro Y</div>
+              <div class="sensor-value" id="gyro-y">-0.3</div>
+              <div class="sensor-unit">°/s</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Gyro Z</div>
+              <div class="sensor-value" id="gyro-z">0.1</div>
+              <div class="sensor-unit">°/s</div>
+            </div>
+          </div>
+
+          <!-- Mini charts -->
+          <div class="charts-row">
+            <div class="chart-wrap">
+              <span class="chart-label">Acceleration X</span>
+              <div class="chart-container"><canvas id="chart-accel-x"></canvas></div>
+            </div>
+            <div class="chart-wrap">
+              <span class="chart-label">Acceleration Y</span>
+              <div class="chart-container"><canvas id="chart-accel-y"></canvas></div>
+            </div>
+            <div class="chart-wrap">
+              <span class="chart-label">Acceleration Z</span>
+              <div class="chart-container"><canvas id="chart-accel-z"></canvas></div>
+            </div>
+            <div class="chart-wrap">
+              <span class="chart-label">Accel Magnitude</span>
+              <div class="chart-container"><canvas id="chart-magnitude"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== ROW: GPS + Node Health ========== -->
+    <div class="grid-2 section-gap">
+
+      <!-- GPS / Location Panel -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">📍</span> GPS / Location</span>
+        </div>
+        <div class="card-body">
+          <div class="gps-data">
+            <div class="gps-item">
+              <div class="gps-label">Latitude</div>
+              <div class="gps-value" id="gps-lat">12.971600</div>
+            </div>
+            <div class="gps-item">
+              <div class="gps-label">Longitude</div>
+              <div class="gps-value" id="gps-lng">77.594600</div>
+            </div>
+            <div class="gps-item">
+              <div class="gps-label">GPS Status</div>
+              <div class="gps-value" id="gps-status">FIX ACQUIRED</div>
+            </div>
+            <div class="gps-item">
+              <div class="gps-label">Last Update</div>
+              <div class="gps-value" id="gps-update">—</div>
+            </div>
+          </div>
+
+          <!-- Map placeholder with grid pattern -->
+          <div class="map-placeholder">
+            <span class="map-pin">📍</span>
+            <span class="map-label">12.9716°N, 77.5946°E</span>
+            <span class="map-label">Map integration pending</span>
+          </div>
+
+          <a id="gps-open-link" href="https://www.google.com/maps?q=12.9716,77.5946" target="_blank" rel="noopener noreferrer" class="btn btn-accent">
+            📍 Open Location in Google Maps
+          </a>
+        </div>
+      </div>
+
+      <!-- Sensor Node Health -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">🔧</span> Sensor Node Health</span>
+          <span style="font-size:0.68rem;color:var(--text-muted);font-family:var(--font-mono);" id="node-count-display">3/3 Online</span>
+        </div>
+        <div class="card-body">
+          <div class="node-list">
+
+            <!-- Motion Node -->
+            <div class="node-item">
+              <div class="node-info">
+                <div class="node-icon">📐</div>
+                <div>
+                  <div class="node-name">Motion Node</div>
+                  <div class="node-heartbeat">
+                    Heartbeat: <span id="node-motion-heartbeat">—</span>
+                  </div>
+                  <div class="node-heartbeat">
+                    Sensor: <span id="node-motion-sensor">MPU6050 OK</span>
+                  </div>
+                </div>
+              </div>
+              <div id="node-motion-status" class="node-status online">
+                <span class="status-dot green"></span> ONLINE
+              </div>
+            </div>
+
+            <!-- Impact Node -->
+            <div class="node-item">
+              <div class="node-info">
+                <div class="node-icon">💥</div>
+                <div>
+                  <div class="node-name">Impact Node</div>
+                  <div class="node-heartbeat">
+                    Heartbeat: <span id="node-impact-heartbeat">—</span>
+                  </div>
+                  <div class="node-heartbeat">
+                    Sensor: <span id="node-impact-sensor">Impact Sensor OK</span>
+                  </div>
+                </div>
+              </div>
+              <div id="node-impact-status" class="node-status online">
+                <span class="status-dot green"></span> ONLINE
+              </div>
+            </div>
+
+            <!-- Gateway Node -->
+            <div class="node-item">
+              <div class="node-info">
+                <div class="node-icon">📡</div>
+                <div>
+                  <div class="node-name">Gateway Node</div>
+                  <div class="node-heartbeat">
+                    Heartbeat: <span id="node-gateway-heartbeat">—</span>
+                  </div>
+                  <div class="node-heartbeat">
+                    Sensor: <span id="node-gateway-sensor">GPS + Wi-Fi OK</span>
+                  </div>
+                </div>
+              </div>
+              <div id="node-gateway-status" class="node-status online">
+                <span class="status-dot green"></span> ONLINE
+              </div>
+            </div>
+
+          </div>
+
+          <!-- CAN Bus Architecture Diagram -->
+          <div class="arch-diagram-label">System Architecture</div>
+          <div class="arch-diagram">
+            <div class="arch-block">
+              <div class="arch-block-title">Sensor Nodes</div>
+              <div class="arch-block-items">
+                <span>Motion (MPU6050)</span>
+                <span>Impact (Sensor)</span>
+              </div>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-block arch-bus">
+              <div class="arch-block-title">CAN Bus</div>
+              <div class="arch-block-items">
+                <span>Data Link</span>
+              </div>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-block">
+              <div class="arch-block-title">Gateway</div>
+              <div class="arch-block-items">
+                <span>ESP32 + GPS</span>
+                <span>Wi-Fi</span>
+              </div>
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-block arch-cloud">
+              <div class="arch-block-title">Cloud / API</div>
+              <div class="arch-block-items">
+                <span>Flask Backend</span>
+                <span>Database</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========== ROW: Accident History ========== -->
+    <div class="section-gap">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">📋</span> Accident History Log</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Vehicle ID</th>
+                <th>Event</th>
+                <th>Severity</th>
+                <th>Location</th>
+                <th>Alert Status</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <!-- Populated by script.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== ROW: Cloud Event History ========== -->
+    <div class="section-gap">
+      <div class="card cloud-events-card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">☁️</span> Cloud Event History</span>
+          <span class="cloud-header-meta">
+            <span id="cloud-connection-label" class="badge badge-info">CHECKING…</span>
+          </span>
+        </div>
+        <div id="cloud-events-body">
+          <!-- Loading state (shown initially) -->
+          <div id="cloud-state-loading" class="cloud-state-msg">
+            <span class="cloud-state-icon">⏳</span>
+            <span class="cloud-state-text">Connecting to cloud backend…</span>
+          </div>
+
+          <!-- Empty state -->
+          <div id="cloud-state-empty" class="cloud-state-msg" style="display:none;">
+            <span class="cloud-state-icon">📭</span>
+            <span class="cloud-state-text">No collision events recorded in the cloud yet.</span>
+          </div>
+
+          <!-- Error state -->
+          <div id="cloud-state-error" class="cloud-state-msg" style="display:none;">
+            <span class="cloud-state-icon">⚠️</span>
+            <span class="cloud-state-text" id="cloud-error-text">Could not reach cloud backend.</span>
+            <button class="btn btn-accent btn-sm" id="btn-cloud-retry">🔄 Retry</button>
+          </div>
+
+          <!-- Event table (hidden until events load) -->
+          <div id="cloud-state-data" class="table-wrapper" style="display:none;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Received (UTC)</th>
+                  <th>Event Type</th>
+                  <th>Accel X</th>
+                  <th>Accel Y</th>
+                  <th>Accel Z</th>
+                  <th>Vibration</th>
+                  <th>Delta</th>
+                  <th>GPS Location</th>
+                </tr>
+              </thead>
+              <tbody id="cloud-events-tbody">
+                <!-- Populated by script.js cloud module -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== ROW: Demo / Test Controls ========== -->
+    <div class="demo-section">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><span class="icon">🧪</span> Developer — Simulation Controls</span>
+          <span style="font-size:0.65rem;color:var(--text-muted);">For testing only — removed in production</span>
+        </div>
+        <div class="card-body">
+          <div class="demo-controls">
+            <button class="btn btn-normal" id="btn-sim-normal">✅ Simulate Normal</button>
+            <button class="btn btn-warning" id="btn-sim-bump">⚠️ Simulate Bump</button>
+            <button class="btn btn-critical" id="btn-sim-collision">💥 Simulate Collision</button>
+            <button class="btn btn-critical" id="btn-sim-rollover">🔄 Simulate Rollover</button>
+            <button class="btn btn-critical" id="btn-sim-critical">🚨 Simulate Critical Accident</button>
+            <button class="btn btn-info" id="btn-sim-node-fail">🔧 Simulate Node Failure</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
