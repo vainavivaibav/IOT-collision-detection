@@ -1,548 +1,608 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IoT Vehicle Collision Detection Dashboard</title>
-  <meta name="description" content="IoT-Based Distributed Vehicle Collision Detection and Emergency Response System — Real-time monitoring dashboard." />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAFERIDE — IoT Collision Detection & Location Monitoring</title>
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
-  <!-- Stylesheet -->
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Production Dependencies: WebGL & Animation Core -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 </head>
 <body>
 
-  <!-- ============================================================
-       HEADER
-       ============================================================ -->
-  <header class="top-header">
-    <div class="header-left">
-      <div class="header-logo">
-        <span class="logo-icon">⚡</span>
-        <span class="logo-text">VehicleGuard IoT</span>
+  <!-- Precision Navigation Header -->
+  <header class="vg-header" id="navbar">
+    <div class="vg-container nav-container">
+      <div class="brand-group">
+        <a href="#engineering" class="brand-link">
+          <svg class="brand-icon" viewBox="0 0 32 32" fill="none">
+            <polygon points="16,2 30,9 30,23 16,30 2,23 2,9" stroke="var(--brand-teal)" stroke-width="2.2" fill="var(--brand-teal-soft)"/>
+            <circle cx="16" cy="16" r="3.5" fill="var(--electric-blue)" />
+            <path d="M16 5 L16 11 M16 21 L16 27 M7 11 L11 13.5 M21 18.5 L25 21" stroke="var(--brand-teal)" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <div class="brand-meta">
+            <span class="brand-title">SAFE<span class="highlight">RIDE</span></span>
+            <span class="brand-subtitle">IoT COLLISION DETECTION SYSTEM</span>
+          </div>
+        </a>
       </div>
-      <span class="header-badge">🚗 VH-001</span>
-    </div>
-    <div class="header-right">
-      <span id="connection-status" class="connection-indicator online">
-        <span class="status-dot green"></span> CONNECTED
-      </span>
-      <span id="cloud-status" class="connection-indicator cloud-offline" title="Cloud backend connection">
-        <span class="status-dot grey"></span> CLOUD
-      </span>
-      <span id="header-clock">—</span>
-      <button id="theme-toggle" class="theme-toggle" title="Switch to light mode">☀️</button>
+
+      <nav class="nav-links">
+        <a href="#overview" class="nav-item">System Overview</a>
+        <a href="#pipeline" class="nav-item">Telemetry Flow</a>
+        <a href="#engineering" class="nav-item">Hardware Assembly</a>
+        <a href="#dashboard" class="nav-item">Event Dashboard</a>
+      </nav>
+
+      <div class="header-right-controls">
+        <div class="header-status-badge" id="cloudStatusBadge" title="Dashboard access to the Render events API">
+          <span class="status-indicator-dot" id="headerCloudDot"></span>
+          <span class="status-text" id="headerCloudText">API CHECKING</span>
+        </div>
+        <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Studio Light/Dark Mode" aria-label="Toggle Studio Theme">
+          <span id="themeToggleIcon">🌙</span>
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- ============================================================
-       DASHBOARD CONTENT
-       ============================================================ -->
-  <main class="dashboard">
+  <main>
+    <!-- SECTION D: Scroll-Driven 3D Exploded Vehicle Assembly -->
+    <section class="section-exploded" id="engineering">
+      <div class="exploded-pinned-container" id="explodedPinned">
+        <div class="exploded-ui-overlay">
+          <div class="assembly-meta-header">
+            <span class="chip chip-teal" id="assemblyPhaseChip">STAGE 1 OF 5: VEHICLE & MOTION</span>
+            <h2 id="assemblyStageTitle">Stage 1: Vehicle & Motion</h2>
+            <p id="assemblyStageDesc">Four-wheeled robot chassis, two DC geared motors, an L298N motor driver, and a suitable motor power supply form the moving platform.</p>
+          </div>
 
-    <!-- ========== VEHICLE STATUS HERO (Full-width focal point) ========== -->
-    <div class="vehicle-hero card border-normal" id="vehicle-status-card">
-      <div class="card-header">
-        <span class="card-title"><span class="icon">🛡️</span> Vehicle Status</span>
-        <span class="badge badge-normal" id="hero-status-badge">NORMAL</span>
+          <!-- Technical Leader Callout Annotations -->
+          <div class="callout-tag callout-adxl" id="calloutADXL">
+            <div class="callout-dot"></div>
+            <div class="callout-body">
+              <span class="callout-title">ADXL345 ACCELEROMETER NODE</span>
+              <span class="callout-sub">Assigned to ESP32 #1 in the design; physical sensor wiring not verified</span>
+            </div>
+          </div>
+
+          <div class="callout-tag callout-gps" id="calloutGPS">
+            <div class="callout-dot"></div>
+            <div class="callout-body">
+              <span class="callout-title">NEO-6M GPS RECEIVER</span>
+              <span class="callout-sub">Intended GPS input to ESP32 #2; physical wiring not verified</span>
+            </div>
+          </div>
+
+          <div class="callout-tag callout-esp" id="calloutESP">
+            <div class="callout-dot"></div>
+            <div class="callout-body">
+              <span class="callout-title">ESP32 GATEWAY NODE</span>
+              <span class="callout-sub">Receives sensor events over Wi-Fi and forwards them with GPS coordinates</span>
+            </div>
+          </div>
+
+          <div class="callout-tag callout-sensor-esp" id="calloutSensorESP">
+            <div class="callout-dot"></div>
+            <div class="callout-body">
+              <span class="callout-title">ESP32 SENSOR NODE</span>
+              <span class="callout-sub">Reads the ADXL345 and SW-420 collision-detection sensors</span>
+            </div>
+          </div>
+
+          <div class="callout-tag callout-piezo" id="calloutPiezo">
+            <div class="callout-dot"></div>
+            <div class="callout-body">
+              <span class="callout-title">SW-420 VIBRATION SENSOR</span>
+              <span class="callout-sub">Vibration sensor signals sudden chassis movement to the sensor node</span>
+            </div>
+          </div>
+
+          <div class="callout-tag callout-cloud" id="calloutCloud">
+            <div class="callout-dot"></div>
+            <div class="callout-body">
+              <span class="callout-title">PLANNED WI-FI HOTSPOT → CLOUD</span>
+              <span class="callout-sub">Gateway-to-Render event transmission is intended; hardware link not verified</span>
+            </div>
+          </div>
+
+          <div class="callout-tag callout-gsm" id="calloutGSM">
+            <div class="callout-dot"></div>
+            <div class="callout-body">
+              <span class="callout-title">SIM800L GSM • PLANNED SMS ALERT</span>
+              <span class="callout-sub">Intended collision/location SMS; wiring and power need multimeter checks</span>
+            </div>
+          </div>
+
+          <!-- Scroll Progress Track -->
+          <div class="assembly-progress-indicator">
+            <div class="progress-bar-fill" id="assemblyProgressFill"></div>
+            <span class="progress-label" id="assemblyProgressLabel">Scroll to explore SAFERIDE hardware (0%)</span>
+          </div>
+        </div>
+
+        <!-- Three.js Canvas Container -->
+        <div id="three-canvas-container" class="three-viewport"></div>
       </div>
+    </section>
 
-      <div class="hero-body">
-        <!-- Left column: identity + status -->
-        <div class="hero-column">
-          <div class="hero-stat">
-            <span class="hero-stat-label">Vehicle ID</span>
-            <span class="hero-stat-value" id="vehicle-id-display">VH-001</span>
-          </div>
-          <div class="hero-stat">
-            <span class="hero-stat-label">Current Status</span>
-            <span class="hero-stat-value normal" id="vehicle-status-value">
-              <span class="status-dot green"></span> NORMAL
-            </span>
-            <span id="vehicle-status-sub">All systems operational</span>
-          </div>
+    <!-- SECTION A: Bright Premium Hero -->
+    <section class="section-hero" id="hero">
+      <div class="hero-bg-grid"></div>
+      <div class="hero-radial-glow"></div>
+
+      <div class="vg-container hero-content">
+        <div class="hero-badges">
+          <span class="chip chip-teal"><span class="pulse-dot"></span> SAFERIDE IoT COLLISION MONITOR</span>
+          <span class="chip chip-dim">ROBOT CAR • TWO ESP32 NODES</span>
         </div>
 
-        <!-- Center: Vehicle SVG visualization -->
-        <div class="hero-vehicle-center vehicle-normal" id="vehicle-viz">
-          <svg class="vehicle-svg" viewBox="0 0 260 100" xmlns="http://www.w3.org/2000/svg">
-            <!-- Status glow ring around the car -->
-            <ellipse cx="130" cy="55" rx="120" ry="42" class="vehicle-glow"/>
+        <h1 class="hero-headline">Every Second After<br><span class="gradient-text">Impact Matters.</span></h1>
 
-            <!-- Ground shadow -->
-            <ellipse cx="130" cy="90" rx="82" ry="5" class="v-shadow"/>
+        <p class="hero-summary">
+          SAFERIDE combines a four-wheeled robot car, sensor-based collision detection, GPS location tracking, and a Render-backed event dashboard. A SIM800L SMS alert path is planned; its wiring, power, and delivery are not yet verified.
+        </p>
 
-            <!-- Lower body -->
-            <rect x="32" y="48" width="196" height="26" rx="5" class="v-body"/>
-
-            <!-- Cabin -->
-            <path d="M82,48 L96,25 Q99,21 103,21 L167,21 Q171,21 174,25 L193,48" class="v-cabin"/>
-
-            <!-- B-pillar -->
-            <line x1="138" y1="22" x2="138" y2="48" class="v-detail-line"/>
-
-            <!-- Front windshield -->
-            <path d="M88,46 L100,27 L135,27 L135,46 Z" class="v-glass"/>
-            <!-- Rear window -->
-            <path d="M141,46 L141,27 L165,27 L186,46 Z" class="v-glass"/>
-
-            <!-- Headlight -->
-            <rect x="222" y="52" width="8" height="8" rx="2" class="v-headlight"/>
-            <!-- Taillight -->
-            <rect x="30" y="52" width="6" height="8" rx="2" class="v-taillight"/>
-
-            <!-- Handle -->
-            <rect x="150" y="40" width="12" height="2" rx="1" class="v-handle"/>
-
-            <!-- Front wheel -->
-            <circle cx="74" cy="74" r="15" class="v-wheel"/>
-            <circle cx="74" cy="74" r="10" class="v-rim"/>
-            <circle cx="74" cy="74" r="3.5" class="v-hub"/>
-            <g class="v-spokes" style="transform-origin:74px 74px">
-              <line x1="74" y1="64" x2="74" y2="67" class="v-spoke-line"/>
-              <line x1="84" y1="74" x2="81" y2="74" class="v-spoke-line"/>
-              <line x1="74" y1="84" x2="74" y2="81" class="v-spoke-line"/>
-              <line x1="64" y1="74" x2="67" y2="74" class="v-spoke-line"/>
-            </g>
-
-            <!-- Rear wheel -->
-            <circle cx="192" cy="74" r="15" class="v-wheel"/>
-            <circle cx="192" cy="74" r="10" class="v-rim"/>
-            <circle cx="192" cy="74" r="3.5" class="v-hub"/>
-            <g class="v-spokes" style="transform-origin:192px 74px">
-              <line x1="192" y1="64" x2="192" y2="67" class="v-spoke-line"/>
-              <line x1="202" y1="74" x2="199" y2="74" class="v-spoke-line"/>
-              <line x1="192" y1="84" x2="192" y2="81" class="v-spoke-line"/>
-              <line x1="182" y1="74" x2="185" y2="74" class="v-spoke-line"/>
-            </g>
-
-            <!-- Antenna -->
-            <line x1="130" y1="21" x2="130" y2="12" class="v-antenna"/>
-            <circle cx="130" cy="10" r="2" class="v-antenna-dot"/>
-
-            <!-- Telemetry signal waves -->
-            <circle cx="130" cy="10" r="4" class="v-signal s1"/>
-            <circle cx="130" cy="10" r="4" class="v-signal s2"/>
-            <circle cx="130" cy="10" r="4" class="v-signal s3"/>
-          </svg>
-        </div>
-
-        <!-- Right column: connection + health -->
-        <div class="hero-column">
-          <div class="hero-stat">
-            <span class="hero-stat-label">Connection</span>
-            <span class="hero-stat-value" id="hero-connection">
-              <span class="status-dot green"></span> ONLINE
-            </span>
-          </div>
-          <div class="hero-stat">
-            <span class="hero-stat-label">System Health</span>
-            <span class="hero-stat-value" id="vehicle-health">All systems operational</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="hero-footer">
-        <span>Last Data Update: <span id="vehicle-last-update">—</span></span>
-        <span>Cloud Events: <span id="cloud-event-count">—</span> · Latest: <span id="cloud-latest-time">—</span></span>
-        <span>Node Count: 3 / 3</span>
-      </div>
-    </div>
-
-    <!-- ========== ROW: Collision + Emergency ========== -->
-    <div class="grid-2 section-gap">
-
-      <!-- Collision Detection Panel -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">💥</span> Collision Detection</span>
-        </div>
-        <div class="card-body">
-          <div class="detection-grid">
-            <div class="detection-item">
-              <div class="det-label">Impact</div>
-              <div id="impact-value" class="det-value safe">NOT DETECTED</div>
-            </div>
-            <div class="detection-item">
-              <div class="det-label">Rollover</div>
-              <div id="rollover-value" class="det-value safe">NOT DETECTED</div>
-            </div>
-            <div class="detection-item">
-              <div class="det-label">Confidence</div>
-              <div id="confidence-value" class="det-value safe">2%</div>
-            </div>
-            <div class="detection-item">
-              <div class="det-label">Severity</div>
-              <div id="severity-value" class="det-value safe">NONE</div>
-            </div>
-            <div class="detection-item">
-              <div class="det-label">Detection State</div>
-              <div id="collision-state" class="det-value safe">NORMAL</div>
-            </div>
-            <div class="detection-item">
-              <div class="det-label">Timestamp</div>
-              <div id="collision-timestamp" class="det-value neutral">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Emergency Alert Panel -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">🚨</span> Emergency Alert</span>
-        </div>
-        <div id="alert-status-box" class="alert-status-box no-alert">
-          <div id="alert-icon" class="alert-icon">✅</div>
-          <div id="alert-text" class="alert-text">NO ACTIVE ALERT</div>
-          <div id="alert-sub" class="alert-sub">System monitoring</div>
-        </div>
-        <div class="alert-meta">
-          <div class="alert-meta-item">
-            <div class="meta-label">Alert Type</div>
-            <div class="meta-value" id="alert-type">—</div>
-          </div>
-          <div class="alert-meta-item">
-            <div class="meta-label">Alert Time</div>
-            <div class="meta-value" id="alert-time">—</div>
-          </div>
-          <div class="alert-meta-item">
-            <div class="meta-label">Sent To</div>
-            <div class="meta-value" id="alert-sent-to">—</div>
-          </div>
-          <div class="alert-meta-item">
-            <div class="meta-label">Status</div>
-            <div class="meta-value">Monitoring</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ========== ROW: Live Motion Data ========== -->
-    <div class="section-gap">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">📐</span> Live Motion Data (MPU6050)</span>
-          <span style="font-size:0.68rem;color:var(--text-muted);font-family:var(--font-mono);">Updating every 1s</span>
-        </div>
-        <div class="card-body">
-          <!-- Sensor values -->
-          <div class="sensor-grid">
-            <div class="sensor-item">
-              <div class="sensor-label">Accel X</div>
-              <div class="sensor-value" id="accel-x">0.12</div>
-              <div class="sensor-unit">g</div>
-            </div>
-            <div class="sensor-item">
-              <div class="sensor-label">Accel Y</div>
-              <div class="sensor-value" id="accel-y">-0.05</div>
-              <div class="sensor-unit">g</div>
-            </div>
-            <div class="sensor-item">
-              <div class="sensor-label">Accel Z</div>
-              <div class="sensor-value" id="accel-z">9.78</div>
-              <div class="sensor-unit">g</div>
-            </div>
-            <div class="sensor-item">
-              <div class="sensor-label">Magnitude</div>
-              <div class="sensor-value" id="accel-mag">9.79</div>
-              <div class="sensor-unit">g</div>
-            </div>
-            <div class="sensor-item">
-              <div class="sensor-label">Gyro X</div>
-              <div class="sensor-value" id="gyro-x">0.8</div>
-              <div class="sensor-unit">°/s</div>
-            </div>
-            <div class="sensor-item">
-              <div class="sensor-label">Gyro Y</div>
-              <div class="sensor-value" id="gyro-y">-0.3</div>
-              <div class="sensor-unit">°/s</div>
-            </div>
-            <div class="sensor-item">
-              <div class="sensor-label">Gyro Z</div>
-              <div class="sensor-value" id="gyro-z">0.1</div>
-              <div class="sensor-unit">°/s</div>
-            </div>
-          </div>
-
-          <!-- Mini charts -->
-          <div class="charts-row">
-            <div class="chart-wrap">
-              <span class="chart-label">Acceleration X</span>
-              <div class="chart-container"><canvas id="chart-accel-x"></canvas></div>
-            </div>
-            <div class="chart-wrap">
-              <span class="chart-label">Acceleration Y</span>
-              <div class="chart-container"><canvas id="chart-accel-y"></canvas></div>
-            </div>
-            <div class="chart-wrap">
-              <span class="chart-label">Acceleration Z</span>
-              <div class="chart-container"><canvas id="chart-accel-z"></canvas></div>
-            </div>
-            <div class="chart-wrap">
-              <span class="chart-label">Accel Magnitude</span>
-              <div class="chart-container"><canvas id="chart-magnitude"></canvas></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ========== ROW: GPS + Node Health ========== -->
-    <div class="grid-2 section-gap">
-
-      <!-- GPS / Location Panel -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">📍</span> GPS / Location</span>
-        </div>
-        <div class="card-body">
-          <div class="gps-data">
-            <div class="gps-item">
-              <div class="gps-label">Latitude</div>
-              <div class="gps-value" id="gps-lat">12.971600</div>
-            </div>
-            <div class="gps-item">
-              <div class="gps-label">Longitude</div>
-              <div class="gps-value" id="gps-lng">77.594600</div>
-            </div>
-            <div class="gps-item">
-              <div class="gps-label">GPS Status</div>
-              <div class="gps-value" id="gps-status">FIX ACQUIRED</div>
-            </div>
-            <div class="gps-item">
-              <div class="gps-label">Last Update</div>
-              <div class="gps-value" id="gps-update">—</div>
-            </div>
-          </div>
-
-          <!-- Map placeholder with grid pattern -->
-          <div class="map-placeholder">
-            <span class="map-pin">📍</span>
-            <span class="map-label">12.9716°N, 77.5946°E</span>
-            <span class="map-label">Map integration pending</span>
-          </div>
-
-          <a id="gps-open-link" href="https://www.google.com/maps?q=12.9716,77.5946" target="_blank" rel="noopener noreferrer" class="btn btn-accent">
-            📍 Open Location in Google Maps
+        <div class="hero-actions">
+          <a href="#engineering" class="btn btn-primary">
+            <span>Explore SAFERIDE Hardware</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
+          </a>
+          <a href="#dashboard" class="btn btn-outline">
+            <span>View Cloud Console</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
-      </div>
 
-      <!-- Sensor Node Health -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">🔧</span> Sensor Node Health</span>
-          <span style="font-size:0.68rem;color:var(--text-muted);font-family:var(--font-mono);" id="node-count-display">3/3 Online</span>
+        <div class="hero-metrics-bar">
+          <div class="metric-item">
+            <span class="metric-label">ACCELEROMETER</span>
+            <span class="metric-val">ADXL345 (±16g SPI/I²C)</span>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric-item">
+            <span class="metric-label">SHOCK DETECTOR</span>
+            <span class="metric-val">SW-420 vibration sensor</span>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric-item">
+            <span class="metric-label">CORE PROCESSING</span>
+            <span class="metric-val">Two ESP32 nodes: sensor + gateway</span>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric-item">
+            <span class="metric-label">EMERGENCY ALERT (PLANNED)</span>
+            <span class="metric-val">SIM800L GSM • SMS not verified</span>
+          </div>
         </div>
-        <div class="card-body">
-          <div class="node-list">
+      </div>
+    </section>
 
-            <!-- Motion Node -->
-            <div class="node-item">
-              <div class="node-info">
-                <div class="node-icon">📐</div>
-                <div>
-                  <div class="node-name">Motion Node</div>
-                  <div class="node-heartbeat">
-                    Heartbeat: <span id="node-motion-heartbeat">—</span>
-                  </div>
-                  <div class="node-heartbeat">
-                    Sensor: <span id="node-motion-sensor">MPU6050 OK</span>
-                  </div>
-                </div>
-              </div>
-              <div id="node-motion-status" class="node-status online">
-                <span class="status-dot green"></span> ONLINE
-              </div>
+    <!-- SECTION B: Problem & Architectural Resolution -->
+    <section class="section-padded" id="overview">
+      <div class="vg-container">
+        <div class="section-header-tag">INCIDENT LIFECYCLE MANAGEMENT</div>
+        <h2 class="section-heading">From Vehicle Motion to Cloud Monitoring and Planned SMS Alerts</h2>
+
+        <div class="grid-two-col">
+          <div class="content-card challenge-card">
+            <div class="card-icon-wrap icon-amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             </div>
-
-            <!-- Impact Node -->
-            <div class="node-item">
-              <div class="node-info">
-                <div class="node-icon">💥</div>
-                <div>
-                  <div class="node-name">Impact Node</div>
-                  <div class="node-heartbeat">
-                    Heartbeat: <span id="node-impact-heartbeat">—</span>
-                  </div>
-                  <div class="node-heartbeat">
-                    Sensor: <span id="node-impact-sensor">Impact Sensor OK</span>
-                  </div>
-                </div>
-              </div>
-              <div id="node-impact-status" class="node-status online">
-                <span class="status-dot green"></span> ONLINE
-              </div>
-            </div>
-
-            <!-- Gateway Node -->
-            <div class="node-item">
-              <div class="node-info">
-                <div class="node-icon">📡</div>
-                <div>
-                  <div class="node-name">Gateway Node</div>
-                  <div class="node-heartbeat">
-                    Heartbeat: <span id="node-gateway-heartbeat">—</span>
-                  </div>
-                  <div class="node-heartbeat">
-                    Sensor: <span id="node-gateway-sensor">GPS + Wi-Fi OK</span>
-                  </div>
-                </div>
-              </div>
-              <div id="node-gateway-status" class="node-status online">
-                <span class="status-dot green"></span> ONLINE
-              </div>
-            </div>
-
+            <h3>Detecting Sudden Movement</h3>
+            <p>
+              A sudden impact or strong vibration can be difficult to observe remotely. Without automatic sensing and location reporting, an event may not be visible to the people monitoring the system.
+            </p>
+            <ul class="bullet-list">
+              <li>Movement events may go unnoticed without sensor-based detection.</li>
+              <li>Vibration and acceleration data need to be collected at the robot car.</li>
+              <li>Event records are more useful when paired with GPS coordinates.</li>
+            </ul>
           </div>
 
-          <!-- CAN Bus Architecture Diagram -->
-          <div class="arch-diagram-label">System Architecture</div>
-          <div class="arch-diagram">
-            <div class="arch-block">
-              <div class="arch-block-title">Sensor Nodes</div>
-              <div class="arch-block-items">
-                <span>Motion (MPU6050)</span>
-                <span>Impact (Sensor)</span>
-              </div>
+          <div class="content-card solution-card">
+            <div class="card-icon-wrap icon-teal">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </div>
-            <div class="arch-arrow">→</div>
-            <div class="arch-block arch-bus">
-              <div class="arch-block-title">CAN Bus</div>
-              <div class="arch-block-items">
-                <span>Data Link</span>
-              </div>
-            </div>
-            <div class="arch-arrow">→</div>
-            <div class="arch-block">
-              <div class="arch-block-title">Gateway</div>
-              <div class="arch-block-items">
-                <span>ESP32 + GPS</span>
-                <span>Wi-Fi</span>
-              </div>
-            </div>
-            <div class="arch-arrow">→</div>
-            <div class="arch-block arch-cloud">
-              <div class="arch-block-title">Cloud / API</div>
-              <div class="arch-block-items">
-                <span>Flask Backend</span>
-                <span>Database</span>
-              </div>
+            <h3>SAFERIDE System Architecture</h3>
+            <p>
+              The design assigns the ADXL345 and SW-420 to ESP32 #1 for collision sensing. ESP32 #2 is designed to receive event data over Wi-Fi and use the NEO-6M for coordinates; the intended cloud route uses a Wi-Fi hotspot to reach the existing Render API and PostgreSQL dashboard. A separate planned SIM800L GSM module is intended to SMS collision/location details to a designated contact. Physical wiring and transmission are not verified.
+            </p>
+            <div class="disclaimer-callout">
+              <strong>Integration status:</strong> The frontend can read stored records from the Render API. Physical ESP32-to-cloud transmission is not verified. The SIM800L is a separate planned SMS path; check its wiring and power with a multimeter before integration. SMS delivery is not implemented or verified.
             </div>
           </div>
         </div>
       </div>
+    </section>
 
-    </div>
+    <!-- SECTION C: 5-Stage System Pipeline -->
+    <section class="section-padded bg-subtle" id="pipeline">
+      <div class="vg-container">
+        <div class="section-header-tag">SYSTEM EXECUTION PIPELINE</div>
+        <h2 class="section-heading">Five Stages of the SAFERIDE System Architecture</h2>
 
-    <!-- ========== ROW: Accident History ========== -->
-    <div class="section-gap">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">📋</span> Accident History Log</span>
-        </div>
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>Vehicle ID</th>
-                <th>Event</th>
-                <th>Severity</th>
-                <th>Location</th>
-                <th>Alert Status</th>
-              </tr>
-            </thead>
-            <tbody id="history-tbody">
-              <!-- Populated by script.js -->
-            </tbody>
-          </table>
+        <div class="pipeline-track">
+          <div class="pipeline-step">
+            <div class="step-num">01</div>
+            <div class="step-badge">VEHICLE & MOTION</div>
+            <h4>Vehicle & Motion</h4>
+            <p>The four-wheel robot chassis moves using two DC geared motors driven by the L298N motor driver and a suitable motor power supply.</p>
+            <div class="step-tech">Robot chassis • 4 wheels • 2 motors • L298N • motor supply</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-num">02</div>
+            <div class="step-badge">COLLISION DETECTION</div>
+            <h4>Collision Detection</h4>
+            <p>ESP32 #1 acts as the sensor node for the ADXL345 accelerometer and SW-420 vibration sensor to detect sudden movement or a possible collision.</p>
+            <div class="step-tech">ESP32 #1 • ADXL345 • SW-420</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-num">03</div>
+            <div class="step-badge">GATEWAY & GPS</div>
+            <h4>Gateway & GPS</h4>
+            <p>ESP32 #2 is designed to receive sensor/event data over Wi-Fi and interface with the NEO-6M GPS module for location coordinates.</p>
+            <div class="step-tech">ESP32 #2 • Wi-Fi event handoff • NEO-6M</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-num">04</div>
+            <div class="step-badge">CLOUD MONITORING</div>
+            <h4>Cloud Monitoring</h4>
+            <p>The intended gateway path uses a Wi-Fi hotspot to send collision events to the existing Render Flask API and PostgreSQL database for dashboard monitoring. Physical transmission is not verified.</p>
+            <div class="step-tech">Wi-Fi hotspot • Render Flask API • PostgreSQL</div>
+          </div>
+
+          <div class="pipeline-step">
+            <div class="step-num">05</div>
+            <div class="step-badge">GSM EMERGENCY ALERT • PLANNED</div>
+            <h4>GSM Emergency Alert</h4>
+            <p>A planned SIM800L module is intended to send collision and location details by SMS to a designated contact. Check its power supply and wiring with a multimeter before integration; SMS is not operational or verified.</p>
+            <div class="step-tech">SIM800L GSM • separate SMS path • not integrated</div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- ========== ROW: Cloud Event History ========== -->
-    <div class="section-gap">
-      <div class="card cloud-events-card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">☁️</span> Cloud Event History</span>
-          <span class="cloud-header-meta">
-            <span id="cloud-connection-label" class="badge badge-info">CHECKING…</span>
-          </span>
+    <!-- SECTION E: Live Cloud & Diagnostic Console -->
+    <section class="section-dashboard" id="dashboard">
+      <div class="vg-container">
+
+        <!-- Dashboard Top Header Bar -->
+        <div class="dashboard-header-bar">
+          <div>
+            <div class="section-header-tag">OPERATIONAL TELEMETRY MONITOR</div>
+            <h2 class="console-title">Cloud Event History & Diagnostics</h2>
+            <p class="console-desc">
+              Reads stored events from the public Render API. Successful retrieval confirms API access, not live ESP32 connectivity.
+              (<code class="code-pill">https://iot-collision-detection.onrender.com</code>)
+            </p>
+          </div>
+          <div class="console-actions">
+            <span class="last-sync-text" id="lastSyncLabel">Never updated</span>
+            <button class="btn btn-secondary" id="btnManualRefresh">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+              <span>Poll Events</span>
+            </button>
+          </div>
         </div>
-        <div id="cloud-events-body">
-          <!-- Loading state (shown initially) -->
-          <div id="cloud-state-loading" class="cloud-state-msg">
-            <span class="cloud-state-icon">⏳</span>
-            <span class="cloud-state-text">Connecting to cloud backend…</span>
+
+        <!-- Status Cards Matrix -->
+        <div class="status-grid">
+          <div class="stat-card" id="cardBackendHealth">
+            <div class="stat-header">
+              <span class="stat-title">Render Cloud API</span>
+              <span class="stat-indicator-pill" id="badgeApiHealth">Checking...</span>
+            </div>
+            <div class="stat-main-value" id="valApiLatency">-- ms</div>
+            <div class="stat-sub">Endpoint: <code>/api/events</code></div>
           </div>
 
-          <!-- Empty state -->
-          <div id="cloud-state-empty" class="cloud-state-msg" style="display:none;">
-            <span class="cloud-state-icon">📭</span>
-            <span class="cloud-state-text">No collision events recorded in the cloud yet.</span>
+          <div class="stat-card" id="cardHardwareNode">
+            <div class="stat-header">
+              <span class="stat-title">Hardware Connectivity</span>
+              <span class="stat-indicator-pill pill-neutral" id="badgeHardware">Not verified</span>
+            </div>
+            <div class="stat-main-value" id="valHardwareStatus">No device heartbeat</div>
+            <div class="stat-sub">Event history does not confirm a live ESP32 connection</div>
           </div>
 
-          <!-- Error state -->
-          <div id="cloud-state-error" class="cloud-state-msg" style="display:none;">
-            <span class="cloud-state-icon">⚠️</span>
-            <span class="cloud-state-text" id="cloud-error-text">Could not reach cloud backend.</span>
-            <button class="btn btn-accent btn-sm" id="btn-cloud-retry">🔄 Retry</button>
+          <div class="stat-card" id="cardGateway">
+            <div class="stat-header">
+              <span class="stat-title">Device Ingestion</span>
+              <span class="stat-indicator-pill pill-neutral" id="badgeGateway">Device-only</span>
+            </div>
+            <div class="stat-main-value" id="valGatewayStatus">Not monitored</div>
+            <div class="stat-sub">POST requires X-API-Key; dashboard does not submit events</div>
           </div>
 
-          <!-- Event table (hidden until events load) -->
-          <div id="cloud-state-data" class="table-wrapper" style="display:none;">
-            <table class="data-table">
+          <div class="stat-card" id="cardTotalEvents">
+            <div class="stat-header">
+              <span class="stat-title">Events Returned</span>
+              <span class="stat-indicator-pill pill-teal" id="badgeEventCount">0 returned</span>
+            </div>
+            <div class="stat-main-value" id="valTotalEvents">0</div>
+            <div class="stat-sub">Stored records returned by the public API (max 50)</div>
+          </div>
+        </div>
+
+        <!-- Latest Stored Sensor Values -->
+        <div class="telemetry-panel">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Latest Stored Sensor Values</h3>
+              <span class="panel-subtitle">Values from the newest event returned by the cloud API; this is not a live hardware feed</span>
+            </div>
+            <span class="telemetry-source-badge" id="telemetrySourceTag">Database Sync: Idle</span>
+          </div>
+
+          <div class="telemetry-metrics-grid">
+            <div class="telemetry-gauge">
+              <span class="gauge-label">ACCELERATION (X-AXIS)</span>
+              <div class="gauge-value" id="valAx">--</div>
+              <span class="gauge-unit">raw units (ADXL345)</span>
+            </div>
+            <div class="telemetry-gauge">
+              <span class="gauge-label">ACCELERATION (Y-AXIS)</span>
+              <div class="gauge-value" id="valAy">--</div>
+              <span class="gauge-unit">raw units (ADXL345)</span>
+            </div>
+            <div class="telemetry-gauge">
+              <span class="gauge-label">ACCELERATION (Z-AXIS)</span>
+              <div class="gauge-value" id="valAz">--</div>
+              <span class="gauge-unit">raw units (ADXL345)</span>
+            </div>
+            <div class="telemetry-gauge">
+              <span class="gauge-label">DELTA IMPACT MAGNITUDE</span>
+              <div class="gauge-value highlight-blue" id="valDelta">--</div>
+              <span class="gauge-unit">threshold evaluation metric</span>
+            </div>
+            <div class="telemetry-gauge">
+              <span class="gauge-label">VIBRATION STATE</span>
+              <div class="gauge-value" id="valVibration">--</div>
+              <span class="gauge-unit">SW-420 vibration sensor</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Local Simulated Waveform Sparklines -->
+        <div class="charts-card">
+          <div class="panel-header">
+            <div>
+              <h3 class="panel-title">Simulated Inertial Vector Curves</h3>
+              <span class="panel-subtitle">Local demo buffer only; these curves are not live ESP32 readings</span>
+            </div>
+            <span class="badge badge-info">LOCAL SIMULATION • 1 S REFRESH</span>
+          </div>
+          <div class="charts-row">
+            <div class="chart-wrap">
+              <span class="chart-label">ACCEL X (ADXL345)</span>
+              <div class="chart-container"><canvas id="chart-accel-x" width="260" height="70"></canvas></div>
+            </div>
+            <div class="chart-wrap">
+              <span class="chart-label">ACCEL Y (ADXL345)</span>
+              <div class="chart-container"><canvas id="chart-accel-y" width="260" height="70"></canvas></div>
+            </div>
+            <div class="chart-wrap">
+              <span class="chart-label">ACCEL Z (ADXL345)</span>
+              <div class="chart-container"><canvas id="chart-accel-z" width="260" height="70"></canvas></div>
+            </div>
+            <div class="chart-wrap">
+              <span class="chart-label">VECTOR MAGNITUDE</span>
+              <div class="chart-container"><canvas id="chart-magnitude" width="260" height="70"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Incident History Console -->
+        <div class="event-history-panel">
+          <div class="panel-toolbar">
+            <div class="toolbar-search-filter">
+              <input type="text" id="filterSearchInput" placeholder="Filter by ID, type, coordinates, sensor values..." class="input-control">
+              <select id="filterTypeSelect" class="input-control select-control">
+                <option value="ALL">All Event Types</option>
+                <option value="POSSIBLE_COLLISION">POSSIBLE_COLLISION</option>
+              </select>
+            </div>
+            <div class="toolbar-stats">
+              <span id="filteredCountLabel">Showing 0 events</span>
+            </div>
+          </div>
+
+          <!-- Dynamic State Containers -->
+          <div id="tableSkeleton" class="table-skeleton-wrap hidden">
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row"></div>
+          </div>
+
+          <div id="tableErrorContainer" class="table-empty-notice hidden">
+            <svg class="notice-icon" viewBox="0 0 24 24" fill="none" stroke="var(--accent-rose)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <h4 id="errorNoticeTitle">Backend Communication Fault</h4>
+            <p id="errorNoticeMsg">Unable to poll events from the Render service. Verify cloud service state.</p>
+            <button class="btn btn-secondary btn-sm" id="btnRetryEvents">Retry Query</button>
+          </div>
+
+          <div id="tableEmptyNotice" class="table-empty-notice hidden">
+            <svg class="notice-icon" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+            <h4>No Stored Events Returned</h4>
+            <p>The events endpoint returned an empty list. This does not indicate whether a physical device is connected.</p>
+          </div>
+
+          <div class="responsive-table-wrap">
+            <table class="event-table" id="eventsTable">
               <thead>
                 <tr>
-                  <th>Received (UTC)</th>
-                  <th>Event Type</th>
-                  <th>Accel X</th>
-                  <th>Accel Y</th>
-                  <th>Accel Z</th>
-                  <th>Vibration</th>
-                  <th>Delta</th>
-                  <th>GPS Location</th>
+                  <th>ID</th>
+                  <th>CLASSIFICATION</th>
+                  <th>TIMESTAMP (UTC)</th>
+                  <th>ACCEL (X, Y, Z)</th>
+                  <th>DELTA</th>
+                  <th>VIBRATION</th>
+                  <th>COORDINATES</th>
+                  <th>ACTION</th>
                 </tr>
               </thead>
-              <tbody id="cloud-events-tbody">
-                <!-- Populated by script.js cloud module -->
+              <tbody id="eventsTableBody">
+                <!-- Injected via script.js -->
               </tbody>
             </table>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- ========== ROW: Demo / Test Controls ========== -->
-    <div class="demo-section">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><span class="icon">🧪</span> Developer — Simulation Controls</span>
-          <span style="font-size:0.65rem;color:var(--text-muted);">For testing only — removed in production</span>
-        </div>
-        <div class="card-body">
-          <div class="demo-controls">
-            <button class="btn btn-normal" id="btn-sim-normal">✅ Simulate Normal</button>
-            <button class="btn btn-warning" id="btn-sim-bump">⚠️ Simulate Bump</button>
-            <button class="btn btn-critical" id="btn-sim-collision">💥 Simulate Collision</button>
-            <button class="btn btn-critical" id="btn-sim-rollover">🔄 Simulate Rollover</button>
-            <button class="btn btn-critical" id="btn-sim-critical">🚨 Simulate Critical Accident</button>
-            <button class="btn btn-info" id="btn-sim-node-fail">🔧 Simulate Node Failure</button>
+        <!-- Node Diagnostics & Demo Simulator Grid -->
+        <div class="grid-two-col section-gap">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title"><span class="icon">🔧</span> System Hardware Architecture</span>
+              <span class="badge badge-info" id="node-count-display">Hardware reference • status unverified</span>
+            </div>
+            <div class="card-body">
+              <div class="node-list">
+                <div class="node-item">
+                  <div class="node-info">
+                    <div class="node-icon">📐</div>
+                    <div>
+                      <div class="node-name">Motion Sensor Node</div>
+                      <div class="node-heartbeat">Heartbeat: <span id="node-motion-heartbeat">Not reported to dashboard</span></div>
+                      <div class="node-heartbeat">Sensor: <span id="node-motion-sensor">ADXL345</span></div>
+                    </div>
+                  </div>
+                  <div id="node-motion-status" class="node-status">
+                    <span class="status-dot"></span> NOT VERIFIED
+                  </div>
+                </div>
+
+                <div class="node-item">
+                  <div class="node-info">
+                    <div class="node-icon">⚡</div>
+                    <div>
+                      <div class="node-name">Impact / Shock Node</div>
+                      <div class="node-heartbeat">Heartbeat: <span id="node-impact-heartbeat">Not reported to dashboard</span></div>
+                      <div class="node-heartbeat">Sensor: <span id="node-impact-sensor">SW-420 vibration sensor</span></div>
+                    </div>
+                  </div>
+                  <div id="node-impact-status" class="node-status">
+                    <span class="status-dot"></span> NOT VERIFIED
+                  </div>
+                </div>
+
+                <div class="node-item">
+                  <div class="node-info">
+                    <div class="node-icon">📡</div>
+                    <div>
+                      <div class="node-name">Gateway & Telemetry Node</div>
+                      <div class="node-heartbeat">Heartbeat: <span id="node-gateway-heartbeat">Not reported to dashboard</span></div>
+                      <div class="node-heartbeat">Modules: <span id="node-gateway-sensor">ESP32 + NEO-6M GPS</span></div>
+                    </div>
+                  </div>
+                  <div id="node-gateway-status" class="node-status">
+                    <span class="status-dot"></span> NOT VERIFIED
+                  </div>
+                </div>
+              </div>
+
+              <div class="arch-diagram-label">Intended Wi-Fi / Cloud Path (Hardware Status Not Reported)</div>
+              <div class="arch-diagram">
+                <div class="arch-block">
+                  <div class="arch-block-title">Sensors</div>
+                  <div class="arch-block-items"><span>ADXL345</span><span>SW-420</span></div>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-block arch-bus">
+                  <div class="arch-block-title">Sensor Node</div>
+                  <div class="arch-block-items"><span>ESP32 #1</span></div>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-block">
+                  <div class="arch-block-title">Wi-Fi Gateway</div>
+                  <div class="arch-block-items"><span>ESP32 #2 + GPS</span></div>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-block arch-cloud">
+                  <div class="arch-block-title">Cloud</div>
+                  <div class="arch-block-items"><span>Flask / Postgre</span></div>
+                </div>
+              </div>
+              <div class="arch-alert-path">
+                <strong>Separate planned GSM path — not wired or verified:</strong>
+                <span>Collision + GPS location → SIM800L → SMS to designated contact</span>
+                <small>Check SIM800L supply and wiring with a multimeter before integration. No SMS delivery is implemented by this dashboard.</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Academic / Lab Demo Simulator Controls -->
+          <div class="card demo-section-card">
+            <div class="card-header">
+              <span class="card-title"><span class="icon">🧪</span> Laboratory Edge Simulation Matrix</span>
+              <span class="badge badge-warning">LOCAL TESTBED DEMO</span>
+            </div>
+            <div class="card-body">
+              <p class="demo-explainer">
+                Exercise client-side evaluation states for academic review without polluting production cloud databases or fabricating unverified server entries.
+              </p>
+
+              <div class="demo-controls-grid">
+                <button class="btn btn-demo btn-normal" id="btn-sim-normal">✅ Simulate Nominal Road</button>
+                <button class="btn btn-demo btn-warning" id="btn-sim-bump">⚠️ Trigger Speed Bump</button>
+                <button class="btn btn-demo btn-critical" id="btn-sim-collision">💥 Trigger Acute Impact</button>
+                <button class="btn btn-demo btn-critical" id="btn-sim-rollover">🔄 Trigger Lateral Rollover</button>
+                <button class="btn btn-demo btn-critical" id="btn-sim-critical">🚨 Severe Compound Impact</button>
+                <button class="btn btn-demo btn-info" id="btn-sim-node-fail">🔧 Simulate Bus Node Fault</button>
+              </div>
+
+              <div class="sim-feedback-box" id="simFeedbackBox">
+                <div class="sim-feedback-header">
+                  <span class="sim-feedback-title">Local Simulation Only — Not Stored:</span>
+                  <span class="badge badge-normal" id="simStateBadge">NOMINAL</span>
+                </div>
+                <div class="sim-feedback-text" id="simFeedbackText">
+                  Simulation executing client-side nominal vector kinematics (1.0g gravity vector).
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
 
+      </div>
+    </section>
   </main>
 
-  <!-- JavaScript -->
+  <!-- Incident Details Modal -->
+  <div class="modal-backdrop hidden" id="eventDetailModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalEventTitle">Incident Telemetry Record</h3>
+        <button class="modal-close-btn" id="modalCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body" id="modalEventBody"></div>
+    </div>
+  </div>
+
+  <footer class="vg-footer">
+    <div class="vg-container footer-content">
+      <div class="footer-left">
+        <span class="brand-title">SAFE<span class="highlight">RIDE</span></span>
+        <p class="footer-tagline">Robot-car collision detection, GPS location tracking, and cloud event monitoring</p>
+      </div>
+      <div class="footer-right">
+        <span>Hardware plan: Robot chassis • 4 wheels • 2 DC motors • L298N • 2× ESP32 • ADXL345 • SW-420 • NEO-6M • SIM800L (SMS integration planned)</span>
+        <span class="footer-copy">&copy; 2026 SAFERIDE Project. Cloud backend hosted on Render; redesigned frontend not yet deployed.</span>
+      </div>
+    </div>
+  </footer>
+
   <script src="script.js"></script>
 </body>
 </html>
