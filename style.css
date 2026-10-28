@@ -824,6 +824,7 @@ h1, h2, h3, h4 {
 
 .pill-teal { color: var(--brand-teal); border-color: rgba(0, 166, 166, 0.3); }
 .pill-emerald { color: var(--accent-emerald); border-color: rgba(5, 150, 105, 0.3); }
+.pill-amber { color: var(--accent-amber); border-color: rgba(217, 119, 6, 0.3); }
 .pill-rose { color: var(--accent-rose); border-color: rgba(225, 29, 72, 0.3); }
 
 .stat-main-value {

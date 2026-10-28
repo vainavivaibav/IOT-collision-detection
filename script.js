@@ -6,6 +6,7 @@
 const CONFIG = {
   API_BASE_URL: 'https://iot-collision-detection.onrender.com',
   POLL_INTERVAL_MS: 30000,
+  DEVICE_STATUS_POLL_INTERVAL_MS: 15000,
   REQUEST_TIMEOUT_MS: 9000
 };
 
@@ -17,6 +18,8 @@ const AppStore = {
   isPollingEvents: false,
   lastPollTimestamp: null,
   apiLatencyMs: null,
+  liveTelemetry: null,
+  liveTelemetryAt: null,
 
   // Rolling 30-sample inertial waveform buffer
   waveforms: {
@@ -386,6 +389,10 @@ class OperationalDashboardEngine {
       headerText: document.getElementById('headerCloudText'),
       badgeApi: document.getElementById('badgeApiHealth'),
       latencyVal: document.getElementById('valApiLatency'),
+      hardwareBadge: document.getElementById('badgeHardware'),
+      hardwareValue: document.getElementById('valHardwareStatus'),
+      gatewayBadge: document.getElementById('badgeGateway'),
+      gatewayValue: document.getElementById('valGatewayStatus'),
       totalEventsVal: document.getElementById('valTotalEvents'),
       eventCountBadge: document.getElementById('badgeEventCount'),
       sourceTag: document.getElementById('telemetrySourceTag'),
@@ -408,6 +415,24 @@ class OperationalDashboardEngine {
       valAz: document.getElementById('valAz'),
       valDelta: document.getElementById('valDelta'),
       valVibration: document.getElementById('valVibration'),
+      telemetrySubtitle: document.querySelector(
+        '.telemetry-panel .panel-subtitle'
+      ),
+      chartsSubtitle: document.querySelector(
+        '.charts-card .panel-subtitle'
+      ),
+
+      deviceNodes: {
+        motionHeartbeat: document.getElementById('node-motion-heartbeat'),
+        motionStatus: document.getElementById('node-motion-status'),
+        motionSensor: document.getElementById('node-motion-sensor'),
+        impactHeartbeat: document.getElementById('node-impact-heartbeat'),
+        impactStatus: document.getElementById('node-impact-status'),
+        impactSensor: document.getElementById('node-impact-sensor'),
+        gatewayHeartbeat: document.getElementById('node-gateway-heartbeat'),
+        gatewayStatus: document.getElementById('node-gateway-status'),
+        gatewaySensor: document.getElementById('node-gateway-sensor')
+      },
 
       // Waveform Canvases
       canvasAx: document.getElementById('chart-accel-x'),
@@ -476,7 +501,10 @@ class OperationalDashboardEngine {
     this.dom.simText.innerText = desc;
 
     // Direct gauge update if no cloud events exist yet
-    if (AppStore.events.length === 0) {
+    if (
+      AppStore.events.length === 0 &&
+      (!AppStore.liveTelemetryAt || Date.now() - AppStore.liveTelemetryAt > 45000)
+    ) {
       this.dom.valAx.innerText = ax.toFixed(2);
       this.dom.valAy.innerText = ay.toFixed(2);
       this.dom.valAz.innerText = az.toFixed(2);
@@ -488,6 +516,41 @@ class OperationalDashboardEngine {
 
   initWaveformLoop() {
     setInterval(() => {
+      if (
+        AppStore.liveTelemetryAt &&
+        Date.now() - AppStore.liveTelemetryAt <= 45000
+      ) {
+        this.drawSparkline(
+          this.dom.canvasAx,
+          AppStore.waveforms.ax,
+          -512,
+          512,
+          '#00A6A6'
+        );
+        this.drawSparkline(
+          this.dom.canvasAy,
+          AppStore.waveforms.ay,
+          -512,
+          512,
+          '#00CFE8'
+        );
+        this.drawSparkline(
+          this.dom.canvasAz,
+          AppStore.waveforms.az,
+          -512,
+          512,
+          '#D97706'
+        );
+        this.drawSparkline(
+          this.dom.canvasMag,
+          AppStore.waveforms.mag,
+          0,
+          900,
+          '#059669'
+        );
+        return;
+      }
+
       const jitter = () => (Math.random() - 0.5) * 0.12;
       const cur = AppStore.simState;
 
@@ -543,7 +606,12 @@ class OperationalDashboardEngine {
 
   initCloudPolling() {
     this.pollCloudEvents();
+    this.pollDeviceStatus();
     setInterval(() => this.pollCloudEvents(), CONFIG.POLL_INTERVAL_MS);
+    setInterval(
+      () => this.pollDeviceStatus(),
+      CONFIG.DEVICE_STATUS_POLL_INTERVAL_MS
+    );
   }
 
   async pollCloudEvents() {
@@ -622,10 +690,303 @@ class OperationalDashboardEngine {
     }
   }
 
+  async pollDeviceStatus() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      CONFIG.REQUEST_TIMEOUT_MS
+    );
+
+    try {
+      const response = await fetch(
+        `${CONFIG.API_BASE_URL}/api/devices/status`,
+        {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          signal: controller.signal
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Device status API error HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (
+        !data ||
+        typeof data !== 'object' ||
+        !Array.isArray(data.devices) ||
+        data.devices.some(device =>
+          !device ||
+          typeof device !== 'object' ||
+          typeof device.device_id !== 'string' ||
+          !['online', 'stale', 'never_seen'].includes(device.status) ||
+          (device.components !== undefined &&
+            (!device.components || typeof device.components !== 'object' ||
+              Array.isArray(device.components)))
+        )
+      ) {
+        throw new Error('Invalid response from device status endpoint');
+      }
+
+      const devices = new Map(
+        data.devices.map(device => [device.device_id, device])
+      );
+      const sensorNode = devices.get('sensor-node-1');
+      const gatewayNode = devices.get('gateway-node-2');
+
+      this.updateLiveTelemetry(sensorNode);
+      this.updateDeviceNode(
+        sensorNode,
+        this.dom.deviceNodes.motionHeartbeat,
+        this.dom.deviceNodes.motionStatus,
+        'adxl345',
+        this.dom.deviceNodes.motionSensor,
+        'ADXL345'
+      );
+      this.updateDeviceNode(
+        sensorNode,
+        this.dom.deviceNodes.impactHeartbeat,
+        this.dom.deviceNodes.impactStatus,
+        'sw420',
+        this.dom.deviceNodes.impactSensor,
+        'SW-420'
+      );
+      this.updateDeviceNode(
+        gatewayNode,
+        this.dom.deviceNodes.gatewayHeartbeat,
+        this.dom.deviceNodes.gatewayStatus,
+        'tcp_link',
+        this.dom.deviceNodes.gatewaySensor,
+        'ESP32 + NEO-6M GPS',
+        'gps_fix'
+      );
+
+      const expected = [sensorNode, gatewayNode].filter(Boolean);
+      const onlineCount = expected.filter(
+        device => device.status === 'online'
+      ).length;
+      const staleCount = expected.filter(
+        device => device.status === 'stale'
+      ).length;
+
+      if (this.dom.hardwareBadge && this.dom.hardwareValue) {
+        if (onlineCount === expected.length && expected.length > 0) {
+          this.dom.hardwareBadge.className =
+            'stat-indicator-pill pill-emerald';
+          this.dom.hardwareBadge.innerText = 'Heartbeats online';
+          this.dom.hardwareValue.innerText =
+            `${onlineCount} of ${expected.length} devices online`;
+        } else if (onlineCount > 0 || staleCount > 0) {
+          this.dom.hardwareBadge.className =
+            'stat-indicator-pill pill-amber';
+          this.dom.hardwareBadge.innerText = 'Check device status';
+          this.dom.hardwareValue.innerText =
+            `${onlineCount} online · ${staleCount} stale`;
+        } else {
+          this.dom.hardwareBadge.className =
+            'stat-indicator-pill pill-neutral';
+          this.dom.hardwareBadge.innerText = 'No heartbeat yet';
+          this.dom.hardwareValue.innerText = 'No device heartbeat received';
+        }
+      }
+    } catch (error) {
+      console.warn('[SAFERIDE Device Status] Could not update:', error);
+      if (this.dom.hardwareBadge && this.dom.hardwareValue) {
+        this.dom.hardwareBadge.className = 'stat-indicator-pill pill-rose';
+        this.dom.hardwareBadge.innerText = 'Status unavailable';
+        this.dom.hardwareValue.innerText = 'Could not retrieve device status';
+      }
+      for (const element of [
+        this.dom.deviceNodes.motionStatus,
+        this.dom.deviceNodes.impactStatus,
+        this.dom.deviceNodes.gatewayStatus
+      ]) {
+        this.setDeviceStatusElement(element, 'STATUS UNAVAILABLE', 'red');
+      }
+      for (const element of [
+        this.dom.deviceNodes.motionHeartbeat,
+        this.dom.deviceNodes.impactHeartbeat,
+        this.dom.deviceNodes.gatewayHeartbeat
+      ]) {
+        if (element) element.innerText = 'Device status unavailable';
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  updateDeviceNode(
+    device,
+    heartbeatElement,
+    statusElement,
+    componentKey,
+    sensorElement,
+    sensorLabel,
+    secondaryComponentKey
+  ) {
+    const componentState = device?.components?.[componentKey] ?? 'unknown';
+    const secondaryState = secondaryComponentKey
+      ? device?.components?.[secondaryComponentKey] ?? 'unknown'
+      : null;
+
+    let label = 'NEVER SEEN';
+    let color = '';
+    if (device?.status === 'online') {
+      if (componentState === 'error' || componentState === 'disconnected') {
+        label = 'COMPONENT ERROR';
+        color = 'red';
+      } else if (componentState === 'unknown') {
+        label = 'NOT VERIFIED';
+        color = 'amber';
+      } else if (secondaryState === 'no_fix') {
+        label = 'ONLINE · GPS NO FIX';
+        color = 'amber';
+      } else if (secondaryState === 'unknown') {
+        label = 'ONLINE · GPS UNVERIFIED';
+        color = 'amber';
+      } else {
+        label = 'ONLINE';
+        color = 'green';
+      }
+    } else if (device?.status === 'stale') {
+      label = 'STALE';
+      color = 'amber';
+    }
+
+    if (heartbeatElement) {
+      heartbeatElement.innerText = device?.last_seen
+        ? `Last heartbeat ${new Date(device.last_seen).toLocaleTimeString()} (${device.age_seconds}s ago)`
+        : 'No heartbeat received yet';
+    }
+    this.setDeviceStatusElement(statusElement, label, color);
+
+    if (sensorElement) {
+      const componentLabel = {
+        ok: 'OK',
+        error: 'ERROR',
+        unknown: 'NOT VERIFIED',
+        connected: 'CONNECTED',
+        disconnected: 'DISCONNECTED',
+        valid: 'GPS FIX',
+        no_fix: 'NO GPS FIX'
+      }[componentState] ?? 'NOT VERIFIED';
+      const suffix = secondaryState
+        ? ` · GPS ${
+          secondaryState === 'valid'
+            ? 'FIX'
+            : secondaryState === 'no_fix'
+              ? 'NO FIX'
+              : 'UNVERIFIED'
+        }`
+        : '';
+      sensorElement.innerText = `${sensorLabel} · ${componentLabel}${suffix}`;
+    }
+  }
+
+  updateLiveTelemetry(device) {
+    const telemetry = device?.telemetry;
+    const isRecent = device?.status === 'online' &&
+      Number.isFinite(device.age_seconds) &&
+      device.age_seconds <= 30;
+    const fields = ['x', 'y', 'z', 'vibration', 'delta'];
+    if (
+      !isRecent ||
+      !telemetry ||
+      fields.some(field => !Number.isFinite(telemetry[field]))
+    ) {
+      if (
+        AppStore.liveTelemetryAt &&
+        (!isRecent ||
+          !telemetry ||
+          fields.some(field => !Number.isFinite(telemetry[field])) ||
+          Date.now() - AppStore.liveTelemetryAt > 45000)
+      ) {
+        AppStore.liveTelemetry = null;
+        AppStore.liveTelemetryAt = null;
+        this.updateGaugesFromLatestCloudRecord();
+      }
+      return false;
+    }
+
+    AppStore.liveTelemetry = telemetry;
+    AppStore.liveTelemetryAt = Date.now();
+    this.dom.valAx.innerText = this.formatNumber(telemetry.x);
+    this.dom.valAy.innerText = this.formatNumber(telemetry.y);
+    this.dom.valAz.innerText = this.formatNumber(telemetry.z);
+    this.dom.valDelta.innerText = this.formatNumber(telemetry.delta);
+    this.dom.valVibration.innerText =
+      this.formatVibration(telemetry.vibration);
+    this.dom.sourceTag.innerText = 'Live ESP32 #1 telemetry';
+    if (this.dom.telemetrySubtitle) {
+      this.dom.telemetrySubtitle.innerText =
+        'Recent sensor readings reported by ESP32 #1; not a direct browser-to-device connection';
+    }
+    if (this.dom.chartsSubtitle) {
+      this.dom.chartsSubtitle.innerText =
+        'Recent ESP32 #1 accelerometer readings (raw sensor counts)';
+    }
+
+    for (const [axis, value] of [
+      ['ax', telemetry.x],
+      ['ay', telemetry.y],
+      ['az', telemetry.z],
+      ['mag', Math.sqrt(
+        telemetry.x ** 2 + telemetry.y ** 2 + telemetry.z ** 2
+      )]
+    ]) {
+      AppStore.waveforms[axis].shift();
+      AppStore.waveforms[axis].push(value);
+    }
+    return true;
+  }
+
+  setDeviceStatusElement(element, label, color) {
+    if (!element) return;
+    const dot = element.querySelector('.status-dot');
+    if (dot) dot.className = `status-dot${color ? ` ${color}` : ''}`;
+    element.replaceChildren(
+      ...(dot ? [dot] : []),
+      document.createTextNode(` ${label}`)
+    );
+  }
+
   updateGaugesFromLatestCloudRecord() {
     const total = AppStore.events.length;
     this.dom.totalEventsVal.innerText = total;
     this.dom.eventCountBadge.innerText = `${total} returned`;
+    if (this.dom.gatewayBadge && this.dom.gatewayValue) {
+      if (total === 0) {
+        this.dom.gatewayBadge.className =
+          'stat-indicator-pill pill-neutral';
+        this.dom.gatewayBadge.innerText = 'Awaiting event';
+        this.dom.gatewayValue.innerText = 'No collision event received';
+      } else {
+        const latestEvent = AppStore.events[0];
+        this.dom.gatewayBadge.className =
+          'stat-indicator-pill pill-teal';
+        this.dom.gatewayBadge.innerText = 'Event stored';
+        this.dom.gatewayValue.innerText =
+          `Latest event #${latestEvent.id ?? 'N/A'}`;
+      }
+    }
+
+    if (
+      AppStore.liveTelemetryAt &&
+      Date.now() - AppStore.liveTelemetryAt <= 45000
+    ) {
+      this.dom.sourceTag.innerText = 'Live ESP32 #1 telemetry';
+      return;
+    }
+
+    if (this.dom.telemetrySubtitle) {
+      this.dom.telemetrySubtitle.innerText =
+        'Values from the newest event returned by the cloud API; this is not a live hardware feed';
+    }
+    if (this.dom.chartsSubtitle) {
+      this.dom.chartsSubtitle.innerText =
+        'Local demo buffer only; these curves are not live ESP32 readings';
+    }
 
     if (total === 0) {
       this.dom.sourceTag.innerText = 'No stored events returned';

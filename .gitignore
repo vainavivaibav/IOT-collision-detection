@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local ESP32 credentials/configuration
+firmware/**/secrets.h

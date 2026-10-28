@@ -17,6 +17,7 @@ Production start command:
 import os
 import logging
 import datetime
+import math
 
 from flask import Flask, request, jsonify
 import psycopg
@@ -46,6 +47,24 @@ if not DATABASE_URL:
 if not DEVICE_API_KEY:
     logger.warning("DEVICE_API_KEY is not set — device ingestion will be disabled.")
 
+EXPECTED_DEVICES = {
+    "sensor-node-1": {
+        "label": "Motion and impact sensor node",
+        "components": {
+            "adxl345": {"ok", "error", "unknown"},
+            "sw420": {"ok", "error", "unknown"},
+        },
+    },
+    "gateway-node-2": {
+        "label": "Gateway and GPS node",
+        "components": {
+            "tcp_link": {"connected", "disconnected", "unknown"},
+            "gps_fix": {"valid", "no_fix", "unknown"},
+        },
+    },
+}
+DEVICE_ONLINE_WINDOW_SECONDS = 60
+
 
 # ──────────────────────────────────────────────
 # Database helpers
@@ -58,24 +77,44 @@ def get_db_connection():
 
 def init_db():
     """Create the events table if it doesn't already exist."""
-    create_table_sql = """
-    CREATE TABLE IF NOT EXISTS collision_events (
-        id              SERIAL PRIMARY KEY,
-        event_type      VARCHAR(50)     NOT NULL,
-        latitude        DOUBLE PRECISION NOT NULL,
-        longitude       DOUBLE PRECISION NOT NULL,
-        x               DOUBLE PRECISION NOT NULL,
-        y               DOUBLE PRECISION NOT NULL,
-        z               DOUBLE PRECISION NOT NULL,
-        vibration       DOUBLE PRECISION NOT NULL,
-        delta           DOUBLE PRECISION NOT NULL,
-        received_at     TIMESTAMPTZ     NOT NULL DEFAULT NOW()
-    );
-    """
+    schema_statements = [
+        """
+        CREATE TABLE IF NOT EXISTS collision_events (
+            id              SERIAL PRIMARY KEY,
+            event_type      VARCHAR(50)     NOT NULL,
+            latitude        DOUBLE PRECISION NOT NULL,
+            longitude       DOUBLE PRECISION NOT NULL,
+            x               DOUBLE PRECISION NOT NULL,
+            y               DOUBLE PRECISION NOT NULL,
+            z               DOUBLE PRECISION NOT NULL,
+            vibration       DOUBLE PRECISION NOT NULL,
+            delta           DOUBLE PRECISION NOT NULL,
+            received_at     TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS device_heartbeats (
+            device_id       VARCHAR(64) PRIMARY KEY,
+            components      JSONB       NOT NULL,
+            telemetry       JSONB       NOT NULL DEFAULT '{}'::jsonb,
+            last_seen       TIMESTAMPTZ NOT NULL
+        );
+        """,
+        """
+        ALTER TABLE device_heartbeats
+            ADD COLUMN IF NOT EXISTS telemetry JSONB NOT NULL DEFAULT '{}'::jsonb;
+        """,
+        """
+        ALTER TABLE collision_events
+            ALTER COLUMN latitude DROP NOT NULL,
+            ALTER COLUMN longitude DROP NOT NULL;
+        """,
+    ]
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(create_table_sql)
+                for statement in schema_statements:
+                    cur.execute(statement)
             conn.commit()
         logger.info("Database schema initialized successfully.")
     except Exception:
@@ -156,15 +195,29 @@ def validate_event_payload(data):
 
     for field, (min_val, max_val) in numeric_fields.items():
         value = data[field]
-        if not isinstance(value, (int, float)):
+        if field in {"latitude", "longitude"} and value is None:
+            cleaned[field] = None
+            continue
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
             return None, (jsonify({"error": f"Field '{field}' must be a number"}), 400)
+        try:
+            numeric_value = float(value)
+        except OverflowError:
+            return None, (jsonify({"error": f"Field '{field}' must be finite"}), 400)
+        if not math.isfinite(numeric_value):
+            return None, (jsonify({"error": f"Field '{field}' must be finite"}), 400)
 
-        if min_val is not None and value < min_val:
+        if min_val is not None and numeric_value < min_val:
             return None, (jsonify({"error": f"Field '{field}' out of range (min {min_val})"}), 400)
-        if max_val is not None and value > max_val:
+        if max_val is not None and numeric_value > max_val:
             return None, (jsonify({"error": f"Field '{field}' out of range (max {max_val})"}), 400)
 
-        cleaned[field] = float(value)
+        cleaned[field] = numeric_value
+
+    if (cleaned.get("latitude") is None) != (cleaned.get("longitude") is None):
+        return None, (jsonify({
+            "error": "Latitude and longitude must both be numbers or both be null"
+        }), 400)
 
     return cleaned, None
 
@@ -183,6 +236,8 @@ def index():
             "health": "/health",
             "events_ingest": "POST /api/events",
             "events_list": "GET /api/events",
+            "heartbeat": "POST /api/heartbeat",
+            "device_status": "GET /api/devices/status",
         },
     })
 
@@ -198,6 +253,182 @@ def health():
     except Exception:
         logger.exception("Health check failed — database unreachable.")
         return jsonify({"status": "unhealthy", "database": "disconnected"}), 503
+
+
+@app.route("/api/heartbeat", methods=["POST", "OPTIONS"])
+def receive_heartbeat():
+    """Record an authenticated device heartbeat and its reported component states."""
+    if request.method == "OPTIONS":
+        return "", 204
+
+    auth_error = require_device_api_key()
+    if auth_error:
+        return auth_error
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({"error": "Request body must be a JSON object"}), 400
+
+    device_id = data.get("device_id")
+    device = EXPECTED_DEVICES.get(device_id) if isinstance(device_id, str) else None
+    if device is None:
+        return jsonify({"error": "Unknown device_id"}), 400
+
+    components = data.get("components")
+    allowed_components = device["components"]
+    if (
+        not isinstance(components, dict)
+        or set(components) != set(allowed_components)
+        or any(
+            not isinstance(value, str) or value not in allowed_components[key]
+            for key, value in components.items()
+        )
+    ):
+        return jsonify({"error": "Invalid component states for device_id"}), 400
+
+    telemetry = {}
+    if device_id == "sensor-node-1" and "telemetry" in data:
+        supplied_telemetry = data["telemetry"]
+        telemetry_fields = {
+            "x", "y", "z", "vibration", "delta", "latitude", "longitude"
+        }
+        if (
+            not isinstance(supplied_telemetry, dict)
+            or set(supplied_telemetry) != telemetry_fields
+        ):
+            return jsonify({"error": "Invalid sensor telemetry fields"}), 400
+
+        for field in ("x", "y", "z", "vibration", "delta"):
+            value = supplied_telemetry[field]
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                return jsonify({
+                    "error": f"Telemetry field '{field}' must be a finite number"
+                }), 400
+            try:
+                numeric_value = float(value)
+            except OverflowError:
+                return jsonify({
+                    "error": f"Telemetry field '{field}' must be a finite number"
+                }), 400
+            if not math.isfinite(numeric_value):
+                return jsonify({
+                    "error": f"Telemetry field '{field}' must be a finite number"
+                }), 400
+            telemetry[field] = numeric_value
+
+        latitude = supplied_telemetry["latitude"]
+        longitude = supplied_telemetry["longitude"]
+        if (latitude is None) != (longitude is None):
+            return jsonify({
+                "error": "Latitude and longitude must both be numbers or both be null"
+            }), 400
+        if latitude is None:
+            telemetry["latitude"] = None
+            telemetry["longitude"] = None
+        else:
+            if (
+                isinstance(latitude, bool)
+                or not isinstance(latitude, (int, float))
+                or isinstance(longitude, bool)
+                or not isinstance(longitude, (int, float))
+            ):
+                return jsonify({"error": "Invalid GPS coordinates"}), 400
+            try:
+                latitude_value = float(latitude)
+                longitude_value = float(longitude)
+            except OverflowError:
+                return jsonify({"error": "Invalid GPS coordinates"}), 400
+            if (
+                not math.isfinite(latitude_value)
+                or not math.isfinite(longitude_value)
+                or not -90 <= latitude_value <= 90
+                or not -180 <= longitude_value <= 180
+            ):
+                return jsonify({"error": "Invalid GPS coordinates"}), 400
+            telemetry["latitude"] = latitude_value
+            telemetry["longitude"] = longitude_value
+    elif "telemetry" in data:
+        return jsonify({"error": "Telemetry is only accepted from sensor-node-1"}), 400
+
+    received_at = datetime.datetime.now(datetime.timezone.utc)
+    upsert_sql = """
+    INSERT INTO device_heartbeats (device_id, components, telemetry, last_seen)
+    VALUES (%(device_id)s, %(components)s, %(telemetry)s, %(last_seen)s)
+    ON CONFLICT (device_id)
+    DO UPDATE SET components = EXCLUDED.components,
+                  telemetry = EXCLUDED.telemetry,
+                  last_seen = EXCLUDED.last_seen
+    """
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(upsert_sql, {
+                    "device_id": device_id,
+                    "components": psycopg.types.json.Jsonb(components),
+                    "telemetry": psycopg.types.json.Jsonb(telemetry),
+                    "last_seen": received_at,
+                })
+            conn.commit()
+        return jsonify({
+            "status": "recorded",
+            "device_id": device_id,
+            "received_at": received_at.isoformat(),
+        }), 200
+    except Exception:
+        logger.exception("Failed to record device heartbeat.")
+        return jsonify({"error": "Could not record device heartbeat"}), 500
+
+
+@app.route("/api/devices/status", methods=["GET"])
+def get_device_status():
+    """Return recent heartbeat state for the known devices."""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT device_id, components, telemetry, last_seen "
+                    "FROM device_heartbeats"
+                )
+                rows = cur.fetchall()
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        stored = {
+            device_id: (components, telemetry, last_seen)
+            for device_id, components, telemetry, last_seen in rows
+        }
+        devices = []
+        for device_id, definition in EXPECTED_DEVICES.items():
+            record = stored.get(device_id)
+            if record is None:
+                components = {}
+                telemetry = {}
+                last_seen = None
+                age_seconds = None
+                status = "never_seen"
+            else:
+                components, telemetry, last_seen = record
+                age_seconds = max(0, int((now - last_seen).total_seconds()))
+                status = (
+                    "online"
+                    if age_seconds <= DEVICE_ONLINE_WINDOW_SECONDS
+                    else "stale"
+                )
+
+            devices.append({
+                "device_id": device_id,
+                "label": definition["label"],
+                "status": status,
+                "last_seen": last_seen.isoformat() if last_seen else None,
+                "age_seconds": age_seconds,
+                "components": components,
+                "telemetry": telemetry,
+            })
+
+        return jsonify({"devices": devices}), 200
+    except Exception:
+        logger.exception("Failed to retrieve device status.")
+        return jsonify({"error": "Could not retrieve device status"}), 500
 
 
 @app.route("/api/events", methods=["POST", "OPTIONS"])
