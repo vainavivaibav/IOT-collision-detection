@@ -1217,7 +1217,7 @@ h1, h2, h3, h4 {
   gap: 4px;
   margin-top: 10px;
   padding: 12px 14px;
-  border: 1px dashed #7C3AED;
+  border: 2px #121212;
   border-radius: var(--radius-sm);
   background: var(--bg-elevated);
   font-size: 0.76rem;
@@ -1225,7 +1225,7 @@ h1, h2, h3, h4 {
 }
 
 .arch-alert-path strong {
-  color: #7C3AED;
+  color: #0f0f0f;
 }
 
 .arch-alert-path small {

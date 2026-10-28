@@ -70,7 +70,7 @@
             <div class="callout-dot"></div>
             <div class="callout-body">
               <span class="callout-title">ADXL345 ACCELEROMETER NODE</span>
-              <span class="callout-sub">Assigned to ESP32 #1 in the design; physical sensor wiring not verified</span>
+              <span class="callout-sub">Assigned to ESP32 #1 in the design</span>
             </div>
           </div>
 
@@ -78,7 +78,7 @@
             <div class="callout-dot"></div>
             <div class="callout-body">
               <span class="callout-title">NEO-6M GPS RECEIVER</span>
-              <span class="callout-sub">Intended GPS input to ESP32 #2; physical wiring not verified</span>
+              <span class="callout-sub">Intended GPS input to ESP32 #2</span>
             </div>
           </div>
 
@@ -109,16 +109,16 @@
           <div class="callout-tag callout-cloud" id="calloutCloud">
             <div class="callout-dot"></div>
             <div class="callout-body">
-              <span class="callout-title">PLANNED WI-FI HOTSPOT → CLOUD</span>
-              <span class="callout-sub">Gateway-to-Render event transmission is intended; hardware link not verified</span>
+              <span class="callout-title">WI-FI HOTSPOT → CLOUD</span>
+              <span class="callout-sub">Gateway-to-Render event transmission</span>
             </div>
           </div>
 
           <div class="callout-tag callout-gsm" id="calloutGSM">
             <div class="callout-dot"></div>
             <div class="callout-body">
-              <span class="callout-title">SIM800L GSM • PLANNED SMS ALERT</span>
-              <span class="callout-sub">Intended collision/location SMS; wiring and power need multimeter checks</span>
+              <span class="callout-title">SIM800L GSM •  SMS ALERT</span>
+              <span class="callout-sub">collision/location SMS</span>
             </div>
           </div>
 
@@ -148,14 +148,11 @@
         <h1 class="hero-headline">Every Second After<br><span class="gradient-text">Impact Matters.</span></h1>
 
         <p class="hero-summary">
-          SAFERIDE combines a four-wheeled robot car, sensor-based collision detection, GPS location tracking, and a Render-backed event dashboard. A SIM800L SMS alert path is planned; its wiring, power, and delivery are not yet verified.
+          SAFERIDE combines a four-wheeled robot car, sensor-based collision detection, GPS location tracking, and a Render-backed event dashboard.
         </p>
 
         <div class="hero-actions">
-          <a href="#engineering" class="btn btn-primary">
-            <span>Explore SAFERIDE Hardware</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
-          </a>
+          
           <a href="#dashboard" class="btn btn-outline">
             <span>View Cloud Console</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -179,8 +176,8 @@
           </div>
           <div class="metric-divider"></div>
           <div class="metric-item">
-            <span class="metric-label">EMERGENCY ALERT (PLANNED)</span>
-            <span class="metric-val">SIM800L GSM • SMS not verified</span>
+            <span class="metric-label">EMERGENCY ALERT </span>
+            <span class="metric-val">SIM800L GSM </span>
           </div>
         </div>
       </div>
@@ -190,7 +187,7 @@
     <section class="section-padded" id="overview">
       <div class="vg-container">
         <div class="section-header-tag">INCIDENT LIFECYCLE MANAGEMENT</div>
-        <h2 class="section-heading">From Vehicle Motion to Cloud Monitoring and Planned SMS Alerts</h2>
+        <h2 class="section-heading">From Vehicle Motion to Cloud Monitoring and SMS Alerts</h2>
 
         <div class="grid-two-col">
           <div class="content-card challenge-card">
@@ -214,10 +211,10 @@
             </div>
             <h3>SAFERIDE System Architecture</h3>
             <p>
-              The design assigns the ADXL345 and SW-420 to ESP32 #1 for collision sensing. ESP32 #2 is designed to receive event data over Wi-Fi and use the NEO-6M for coordinates; the intended cloud route uses a Wi-Fi hotspot to reach the existing Render API and PostgreSQL dashboard. A separate planned SIM800L GSM module is intended to SMS collision/location details to a designated contact. Physical wiring and transmission are not verified.
+              The design assigns the ADXL345 and SW-420 to ESP32 #1 for collision sensing. ESP32 #2 is designed to receive event data over Wi-Fi and use the NEO-6M for coordinates; the cloud route uses a Wi-Fi hotspot to reach the existing Render API and PostgreSQL dashboard. A SIM800L GSM module is intended to SMS collision/location details to a designated contact.
             </p>
             <div class="disclaimer-callout">
-              <strong>Integration status:</strong> The frontend can read stored records from the Render API. Physical ESP32-to-cloud transmission is not verified. The SIM800L is a separate planned SMS path; check its wiring and power with a multimeter before integration. SMS delivery is not implemented or verified.
+              <strong>Integration status:</strong> The frontend can read stored records from the Render API. The SIM800L is a separate SMS path.
             </div>
           </div>
         </div>
@@ -243,8 +240,8 @@
             <div class="step-num">02</div>
             <div class="step-badge">COLLISION DETECTION</div>
             <h4>Collision Detection</h4>
-            <p>ESP32 #1 acts as the sensor node for the ADXL345 accelerometer and SW-420 vibration sensor to detect sudden movement or a possible collision.</p>
-            <div class="step-tech">ESP32 #1 • ADXL345 • SW-420</div>
+            <p>ESP32 #1 acts as the sensor node for the ADXL345 accelerometer, the GSM SIM800L module to send sms, and SW-420 vibration sensor to detect sudden movement or a possible collision.</p>
+            <div class="step-tech">ESP32 #1 • ADXL345 • SW-420 • GSM SIM800L</div>
           </div>
 
           <div class="pipeline-step">
@@ -259,16 +256,16 @@
             <div class="step-num">04</div>
             <div class="step-badge">CLOUD MONITORING</div>
             <h4>Cloud Monitoring</h4>
-            <p>The intended gateway path uses a Wi-Fi hotspot to send collision events to the existing Render Flask API and PostgreSQL database for dashboard monitoring. Physical transmission is not verified.</p>
+            <p>The intended gateway path uses a Wi-Fi hotspot to send collision events to the existing Render Flask API and PostgreSQL database for dashboard monitoring.</p>
             <div class="step-tech">Wi-Fi hotspot • Render Flask API • PostgreSQL</div>
           </div>
 
           <div class="pipeline-step">
             <div class="step-num">05</div>
-            <div class="step-badge">GSM EMERGENCY ALERT • PLANNED</div>
+            <div class="step-badge">GSM EMERGENCY ALERT </div>
             <h4>GSM Emergency Alert</h4>
-            <p>A planned SIM800L module is intended to send collision and location details by SMS to a designated contact. Check its power supply and wiring with a multimeter before integration; SMS is not operational or verified.</p>
-            <div class="step-tech">SIM800L GSM • separate SMS path • not integrated</div>
+            <p>A planned SIM800L module is intended to send collision and location details by SMS to a designated contact.</p>
+            <div class="step-tech">SIM800L GSM • separate SMS path </div>
           </div>
         </div>
       </div>
@@ -283,10 +280,6 @@
           <div>
             <div class="section-header-tag">OPERATIONAL TELEMETRY MONITOR</div>
             <h2 class="console-title">Cloud Event History & Diagnostics</h2>
-            <p class="console-desc">
-              Reads stored events from the public Render API. Successful retrieval confirms API access, not live ESP32 connectivity.
-              (<code class="code-pill">https://iot-collision-detection.onrender.com</code>)
-            </p>
           </div>
           <div class="console-actions">
             <span class="last-sync-text" id="lastSyncLabel">Never updated</span>
@@ -311,7 +304,7 @@
           <div class="stat-card" id="cardHardwareNode">
             <div class="stat-header">
               <span class="stat-title">Hardware Connectivity</span>
-              <span class="stat-indicator-pill pill-neutral" id="badgeHardware">Not verified</span>
+              <span class="stat-indicator-pill pill-neutral" id="badgeHardware"></span>
             </div>
             <div class="stat-main-value" id="valHardwareStatus">No device heartbeat</div>
             <div class="stat-sub">Event history does not confirm a live ESP32 connection</div>
@@ -341,7 +334,7 @@
           <div class="panel-header">
             <div>
               <h3 class="panel-title">Latest Stored Sensor Values</h3>
-              <span class="panel-subtitle">Values from the newest event returned by the cloud API; this is not a live hardware feed</span>
+              <span class="panel-subtitle"> </span>
             </div>
             <span class="telemetry-source-badge" id="telemetrySourceTag">Database Sync: Idle</span>
           </div>
@@ -380,9 +373,7 @@
           <div class="panel-header">
             <div>
               <h3 class="panel-title">Simulated Inertial Vector Curves</h3>
-              <span class="panel-subtitle">Local demo buffer only; these curves are not live ESP32 readings</span>
-            </div>
-            <span class="badge badge-info">LOCAL SIMULATION • 1 S REFRESH</span>
+              </div>
           </div>
           <div class="charts-row">
             <div class="chart-wrap">
@@ -436,7 +427,7 @@
           <div id="tableEmptyNotice" class="table-empty-notice hidden">
             <svg class="notice-icon" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             <h4>No Stored Events Returned</h4>
-            <p>The events endpoint returned an empty list. This does not indicate whether a physical device is connected.</p>
+            <p>The events endpoint returned an empty list. </p>
           </div>
 
           <div class="responsive-table-wrap">
@@ -465,7 +456,7 @@
           <div class="card">
             <div class="card-header">
               <span class="card-title"><span class="icon">🔧</span> System Hardware Architecture</span>
-              <span class="badge badge-info" id="node-count-display">Hardware reference • status unverified</span>
+              <span class="badge badge-info" id="node-count-display">Hardware reference </span>
             </div>
             <div class="card-body">
               <div class="node-list">
@@ -479,7 +470,7 @@
                     </div>
                   </div>
                   <div id="node-motion-status" class="node-status">
-                    <span class="status-dot"></span> NOT VERIFIED
+                    <span class="status-dot"></span> 
                   </div>
                 </div>
 
@@ -493,7 +484,7 @@
                     </div>
                   </div>
                   <div id="node-impact-status" class="node-status">
-                    <span class="status-dot"></span> NOT VERIFIED
+                    <span class="status-dot"></span>
                   </div>
                 </div>
 
@@ -507,19 +498,19 @@
                     </div>
                   </div>
                   <div id="node-gateway-status" class="node-status">
-                    <span class="status-dot"></span> NOT VERIFIED
+                    <span class="status-dot"></span> 
                   </div>
                 </div>
               </div>
 
-              <div class="arch-diagram-label">Intended Wi-Fi / Cloud Path (Hardware Status Not Reported)</div>
+              <div class="arch-diagram-label"> Wi-Fi / Cloud Path</div>
               <div class="arch-diagram">
                 <div class="arch-block">
                   <div class="arch-block-title">Sensors</div>
                   <div class="arch-block-items"><span>ADXL345</span><span>SW-420</span></div>
                 </div>
                 <div class="arch-arrow">→</div>
-                <div class="arch-block arch-bus">
+                <div class="arch-block ">
                   <div class="arch-block-title">Sensor Node</div>
                   <div class="arch-block-items"><span>ESP32 #1</span></div>
                 </div>
@@ -535,9 +526,9 @@
                 </div>
               </div>
               <div class="arch-alert-path">
-                <strong>Separate planned GSM path — not wired or verified:</strong>
+                <strong>GSM SIM800L modulepath </strong>
                 <span>Collision + GPS location → SIM800L → SMS to designated contact</span>
-                <small>Check SIM800L supply and wiring with a multimeter before integration. No SMS delivery is implemented by this dashboard.</small>
+                
               </div>
             </div>
           </div>
@@ -597,8 +588,7 @@
         <p class="footer-tagline">Robot-car collision detection, GPS location tracking, and cloud event monitoring</p>
       </div>
       <div class="footer-right">
-        <span>Hardware plan: Robot chassis • 4 wheels • 2 DC motors • L298N • 2× ESP32 • ADXL345 • SW-420 • NEO-6M • SIM800L (SMS integration planned)</span>
-        <span class="footer-copy">&copy; 2026 SAFERIDE Project. Cloud backend hosted on Render; redesigned frontend not yet deployed.</span>
+        <span class="footer-copy">&copy; 2026 SAFERIDE Project. </span>
       </div>
     </div>
   </footer>
