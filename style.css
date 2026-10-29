@@ -1001,7 +1001,9 @@ h1, h2, h3, h4 {
 }
 
 .responsive-table-wrap {
+  height: 224px;
   overflow-x: auto;
+  overflow-y: auto;
 }
 
 .event-table {
@@ -1010,22 +1012,33 @@ h1, h2, h3, h4 {
   text-align: left;
 }
 
+.event-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-surface);
+}
+
 .event-table th {
-  padding: 12px 16px;
+  height: 36px;
+  padding: 10px 16px;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 600;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border-dim);
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .event-table td {
+  height: 47px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border-dim);
   color: var(--text-dim);
   font-family: var(--font-mono);
   font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .event-table tbody tr:hover {
