@@ -1180,3 +1180,29 @@ document.addEventListener('DOMContentLoaded', () => {
   setupThemeManager(vehicleApp);
   new OperationalDashboardEngine();
 });
+
+/* ==========================================
+   PERSON 4 — CLOUD REPORT DOWNLOADS
+   ========================================== */
+
+function downloadCollisionReport(format) {
+  const url = `${CONFIG.API_BASE_URL}/api/reports/${format}`;
+
+  // Open the report endpoint to start the download.
+  window.location.href = url;
+}
+
+const downloadCsvBtn = document.getElementById("downloadCsvBtn");
+const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+
+if (downloadCsvBtn) {
+  downloadCsvBtn.addEventListener("click", () => {
+    downloadCollisionReport("csv");
+  });
+}
+
+if (downloadPdfBtn) {
+  downloadPdfBtn.addEventListener("click", () => {
+    downloadCollisionReport("pdf");
+  });
+}
