@@ -19,7 +19,9 @@ import logging
 import datetime
 import math
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
+from reports.csv_report import generate_csv
+from reports.pdf_report import generate_pdf
 import psycopg
 from notifications.telegram import send_telegram_alert
 # ──────────────────────────────────────────────
@@ -553,6 +555,105 @@ def list_events():
         logger.exception("Failed to retrieve events.")
         return jsonify({"error": "Internal server error — could not retrieve events"}), 500
 
+
+@app.route("/api/reports/csv", methods=["GET"])
+def download_csv_report():
+    """Download recent collision events as CSV."""
+    try:
+        limit = max(1, min(int(request.args.get("limit", 200)), 200))
+    except (ValueError, TypeError):
+        limit = 200
+
+    select_sql = """
+    SELECT id, event_type, latitude, longitude,
+           x, y, z, vibration, delta, received_at
+    FROM collision_events
+    ORDER BY received_at DESC
+    LIMIT %(limit)s
+    """
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(select_sql, {"limit": limit})
+                rows = cur.fetchall()
+
+        columns = [
+            "id", "event_type", "latitude", "longitude",
+            "x", "y", "z", "vibration", "delta", "received_at"
+        ]
+
+        events = []
+        for row in rows:
+            event = dict(zip(columns, row))
+            if event["received_at"]:
+                event["received_at"] = event["received_at"].isoformat()
+            events.append(event)
+
+        csv_content = generate_csv(events)
+
+        return Response(
+            csv_content,
+            mimetype="text/csv",
+            headers={
+                "Content-Disposition":
+                    "attachment; filename=collision_report.csv"
+            }
+        )
+
+    except Exception:
+        logger.exception("Failed to generate CSV report.")
+        return jsonify({"error": "Could not generate CSV report"}), 500
+
+
+@app.route("/api/reports/pdf", methods=["GET"])
+def download_pdf_report():
+    """Download recent collision events as a PDF."""
+    try:
+        limit = max(1, min(int(request.args.get("limit", 200)), 200))
+    except (ValueError, TypeError):
+        limit = 200
+
+    select_sql = """
+    SELECT id, event_type, latitude, longitude,
+           x, y, z, vibration, delta, received_at
+    FROM collision_events
+    ORDER BY received_at DESC
+    LIMIT %(limit)s
+    """
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(select_sql, {"limit": limit})
+                rows = cur.fetchall()
+
+        columns = [
+            "id", "event_type", "latitude", "longitude",
+            "x", "y", "z", "vibration", "delta", "received_at"
+        ]
+
+        events = []
+        for row in rows:
+            event = dict(zip(columns, row))
+            if event["received_at"]:
+                event["received_at"] = event["received_at"].isoformat()
+            events.append(event)
+
+        pdf_content = generate_pdf(events)
+
+        return Response(
+            pdf_content,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition":
+                    "attachment; filename=collision_report.pdf"
+            }
+        )
+
+    except Exception:
+        logger.exception("Failed to generate PDF report.")
+        return jsonify({"error": "Could not generate PDF report"}), 500
 
 # ──────────────────────────────────────────────
 # Startup
