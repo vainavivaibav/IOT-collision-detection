@@ -21,7 +21,7 @@ import math
 
 from flask import Flask, request, jsonify
 import psycopg
-
+from notifications.telegram import send_telegram_alert
 # ──────────────────────────────────────────────
 # Configuration
 # ──────────────────────────────────────────────
@@ -484,11 +484,17 @@ def ingest_event():
 
         logger.info("Stored collision event id=%d type=%s", event_id, cleaned["event_type"])
 
+        # Send Telegram alert after successful database storage
+        try:
+            send_telegram_alert(cleaned)
+        except Exception:
+            logger.error("Telegram notification failed. Collision event remains stored.")
+
         return jsonify({
-            "status": "stored",
-            "event_id": event_id,
-            "received_at": stored_at,
-        }), 201
+                    "status": "stored",
+                    "event_id": event_id,
+                    "received_at": stored_at,
+                }), 201
 
     except Exception:
         logger.exception("Failed to store collision event.")
