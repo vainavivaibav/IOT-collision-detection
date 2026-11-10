@@ -88,6 +88,14 @@ bool adxlReady = false;
 unsigned long lastSample = 0;
 unsigned long lastEvent = 0;
 unsigned long lastTelemetryPrint = 0;
+const unsigned long DASHBOARD_HEARTBEAT_INTERVAL_MS = 20000;
+
+// Latest sensor readings for heartbeat telemetry
+int16_t latestX = 0;
+int16_t latestY = 0;
+int16_t latestZ = 0;
+int latestVibration = 0;
+int latestDelta = 0;
 unsigned long lastMotionCommand = 0;
 unsigned long lastHotspotAttempt = 0;
 
@@ -818,7 +826,143 @@ bool uploadCollisionEvent(const CollisionEvent &event) {
 
   return code >= 200 && code < 300;
 }
+// =====================================================
+// DASHBOARD DEVICE HEARTBEAT
+// =====================================================
 
+bool uploadDeviceHeartbeat(
+  const String &deviceId,
+  const String &components,
+  const String &telemetry = ""
+) {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Heartbeat failed: no internet.");
+    return false;
+  }
+
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure();
+
+  HTTPClient https;
+  https.setConnectTimeout(4000);
+  https.setTimeout(5000);
+
+  const char* heartbeatURL =
+    "https://iot-collision-detection.onrender.com/api/heartbeat";
+
+  if (!https.begin(secureClient, heartbeatURL)) {
+    Serial.println("Heartbeat HTTPS begin failed.");
+    return false;
+  }
+
+  https.addHeader("Content-Type", "application/json");
+  https.addHeader("X-API-Key", API_KEY);
+
+  String body =
+    "{\"device_id\":\"" + deviceId +
+    "\",\"components\":" + components;
+
+  if (telemetry.length() > 0) {
+    body += ",\"telemetry\":" + telemetry;
+  }
+
+  body += "}";
+
+  int code = https.POST(body);
+  String response = https.getString();
+
+  https.end();
+
+  Serial.printf(
+    "Heartbeat [%s] HTTP status: %d\n",
+    deviceId.c_str(),
+    code
+  );
+
+  if (response.length()) {
+    Serial.println(response);
+  }
+
+  return code >= 200 && code < 300;
+}
+
+
+// Send heartbeat records for both ESP32 boards
+void sendDashboardHeartbeats() {
+
+  // ---------------- ESP32 #1 SENSOR NODE ----------------
+
+  String sensorComponents =
+    "{\"adxl345\":\"" +
+    String(adxlReady ? "ok" : "error") +
+    "\",\"sw420\":\"ok\"}";
+
+  bool gpsFresh =
+    latestGpsValid &&
+    (millis() - latestGpsAt < GPS_FRESH_MS);
+
+  String sensorTelemetry =
+    "{\"x\":" + String(latestX) +
+    ",\"y\":" + String(latestY) +
+    ",\"z\":" + String(latestZ) +
+    ",\"vibration\":" + String(latestVibration) +
+    ",\"delta\":" + String(latestDelta) +
+    ",\"latitude\":" +
+    (gpsFresh ? String(latestLat, 6) : "null") +
+    ",\"longitude\":" +
+    (gpsFresh ? String(latestLon, 6) : "null") +
+    "}";
+
+  uploadDeviceHeartbeat(
+    "sensor-node-1",
+    sensorComponents,
+    sensorTelemetry
+  );
+
+
+  // ---------------- ESP32 #2 GATEWAY NODE ----------------
+
+  bool gatewayConnected = false;
+
+if (gatewayMutex != nullptr &&
+    xSemaphoreTake(gatewayMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+
+  gatewayConnected =
+    gatewayClient && gatewayClient.connected();
+
+  xSemaphoreGive(gatewayMutex);
+}
+
+  bool gatewayGpsFresh =
+    gatewayConnected &&
+    latestGpsValid &&
+    (millis() - latestGpsAt < GPS_FRESH_MS);
+
+  String gatewayComponents =
+    "{\"tcp_link\":\"" +
+    String(gatewayConnected ? "connected" : "disconnected") +
+    "\",\"gps_fix\":\"" +
+    String(gatewayGpsFresh ? "valid" : "no_fix") +
+    "\"}";
+
+  uploadDeviceHeartbeat(
+    "gateway-node-2",
+    gatewayComponents
+  );
+}
+
+void dashboardHeartbeatTask(void *parameter) {
+  for (;;) {
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("Sending dashboard device heartbeats...");
+      sendDashboardHeartbeats();
+    }
+
+    vTaskDelay(
+      pdMS_TO_TICKS(DASHBOARD_HEARTBEAT_INTERVAL_MS)
+    );
+  }
+}
 // =====================================================
 // BACKGROUND COLLISION RESPONSE TASK
 // =====================================================
@@ -1007,6 +1151,7 @@ BaseType_t healthTaskResult = xTaskCreate(
   nullptr
 );
 
+
 if (healthTaskResult != pdPASS) {
   Serial.println("WARNING: Cloud health task failed to start.");
 }
@@ -1021,6 +1166,18 @@ if (healthTaskResult != pdPASS) {
       : "ERROR: AP failed."
   );
 
+BaseType_t heartbeatTaskResult = xTaskCreate(
+  dashboardHeartbeatTask,
+  "DashboardHeartbeat",
+  8192,
+  nullptr,
+  1,
+  nullptr
+);
+
+if (heartbeatTaskResult != pdPASS) {
+  Serial.println("WARNING: Dashboard heartbeat task failed.");
+}
   Serial.print("CollisionNet IP: ");
   Serial.println(WiFi.softAPIP());
 
@@ -1118,6 +1275,12 @@ void loop() {
         prevZ = z;
         havePrevious = true;
 
+        // Save latest readings for dashboard heartbeat
+          latestX = x;
+          latestY = y;
+          latestZ = z;
+          latestVibration = vibration;
+          latestDelta = delta;
         String data =
           "DATA,X=" + String(x) +
           ",Y=" + String(y) +
